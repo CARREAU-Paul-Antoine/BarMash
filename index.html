@@ -1,0 +1,717 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BarMash : La Tournée Infernale • Simulation Haute Charge (Naïve)</title>
+    <style>
+      :root {
+        --bg-main: #07090e;
+        --sidebar-bg: rgba(13, 17, 26, 0.95);
+        --border-color: #1e2638;
+        --text-primary: #f8fafc;
+        --text-muted: #64748b;
+        --accent-cyan: #06b6d4;
+        --accent-amber: #f59e0b;
+        --accent-green: #22c55e;
+        --accent-red: #ef4444;
+        --accent-purple: #a855f7;
+        --neon-glow: 0 0 12px rgba(6, 182, 212, 0.4);
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+      }
+
+      body {
+        background: var(--bg-main);
+        color: var(--text-primary);
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      /* ---------------- Sidebar HUD ---------------- */
+      #sidebar {
+        width: 360px;
+        background: var(--sidebar-bg);
+        border-right: 1px solid var(--border-color);
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        overflow-y: auto;
+        z-index: 10;
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+      }
+
+      .header-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .header-title h1 {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--accent-amber);
+        letter-spacing: 0.5px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .badge-naive {
+        background: rgba(239, 68, 68, 0.15);
+        color: var(--accent-red);
+        border: 1px solid var(--accent-red);
+        font-size: 0.65rem;
+        padding: 2px 6px;
+        border-radius: 4px;
+        text-transform: uppercase;
+        font-weight: 800;
+      }
+
+      .status-pill {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.72rem;
+        color: var(--text-muted);
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent-red);
+      }
+      .dot.live {
+        background: var(--accent-green);
+        box-shadow: 0 0 8px var(--accent-green);
+      }
+
+      /* Performance Card */
+      .card-perf {
+        background: #0b0f19;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 12px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      .metric-box {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .metric-box .label {
+        font-size: 0.65rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .metric-box .value {
+        font-size: 1.35rem;
+        font-weight: 800;
+        color: #fff;
+        margin-top: 2px;
+      }
+
+      .metric-box .unit {
+        font-size: 0.7rem;
+        font-weight: normal;
+        color: var(--text-muted);
+      }
+
+      .tps-alert {
+        color: var(--accent-red) !important;
+      }
+      .tps-ok {
+        color: var(--accent-green) !important;
+      }
+
+      /* Diagnostics Notice */
+      .audit-alert {
+        background: rgba(239, 68, 68, 0.08);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        border-radius: 6px;
+        padding: 10px;
+        font-size: 0.72rem;
+        line-height: 1.4;
+        color: #fca5a5;
+      }
+      .audit-alert strong {
+        color: #fff;
+        display: block;
+        margin-bottom: 4px;
+        font-size: 0.75rem;
+      }
+
+      /* Section Metrics */
+      .section-card {
+        background: #0b0f19;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .section-title {
+        font-size: 0.72rem;
+        color: var(--accent-cyan);
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        font-weight: 700;
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .row-stat {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.8rem;
+      }
+      .row-stat span:first-child {
+        color: var(--text-muted);
+      }
+      .row-stat span:last-child {
+        font-weight: 700;
+      }
+
+      /* Progress Bars for Population */
+      .bar-wrapper {
+        margin-top: 4px;
+        display: flex;
+        height: 6px;
+        border-radius: 3px;
+        overflow: hidden;
+        background: #1e2638;
+      }
+      .bar-seg {
+        height: 100%;
+        transition: width 0.2s ease;
+      }
+      .bar-sober {
+        background: var(--accent-cyan);
+      }
+      .bar-drinking {
+        background: var(--accent-amber);
+      }
+      .bar-vomiting {
+        background: var(--accent-green);
+      }
+
+      /* Legend */
+      .legend-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        font-size: 0.72rem;
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .legend-color {
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+      }
+
+      /* Controls */
+      .controls-row {
+        display: flex;
+        gap: 8px;
+        margin-top: auto;
+      }
+      .btn {
+        flex: 1;
+        background: #1e2638;
+        border: 1px solid #334155;
+        color: var(--text-primary);
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: background 0.2s;
+        text-align: center;
+      }
+      .btn:hover {
+        background: #334155;
+      }
+      .btn-primary {
+        background: #1e3a5f;
+        border-color: var(--accent-cyan);
+        color: #e0f2fe;
+      }
+      .btn-primary:hover {
+        background: #2563eb;
+      }
+
+      /* ---------------- Canvas Area ---------------- */
+      #viewport {
+        flex: 1;
+        position: relative;
+        background: #05070b;
+        cursor: grab;
+      }
+      #viewport:active {
+        cursor: grabbing;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      .canvas-overlay {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        background: rgba(13, 17, 26, 0.85);
+        border: 1px solid var(--border-color);
+        padding: 8px 14px;
+        border-radius: 6px;
+        font-size: 0.72rem;
+        color: var(--text-muted);
+        pointer-events: none;
+      }
+      .canvas-overlay strong {
+        color: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Sidebar Télémétrie -->
+    <aside id="sidebar">
+      <div class="header-title">
+        <h1>🍺 BarMash</h1>
+        <span class="badge-naive">Moteur Naïf O(N²)</span>
+      </div>
+
+      <div class="status-pill">
+        <div class="dot" id="ws-dot"></div>
+        <span id="ws-status">Connexion au serveur...</span>
+      </div>
+
+      <!-- Métriques de Performance & Surcharge -->
+      <div class="card-perf">
+        <div class="metric-box">
+          <span class="label">Rendu TPS</span>
+          <div class="value" id="val-tps">-- <span class="unit">/ 30</span></div>
+        </div>
+        <div class="metric-box">
+          <span class="label">Temps / Tick</span>
+          <div class="value" id="val-ticktime">-- <span class="unit">ms</span></div>
+        </div>
+        <div class="metric-box">
+          <span class="label">RAM Heap</span>
+          <div class="value" id="val-heap">-- <span class="unit">MB</span></div>
+        </div>
+        <div class="metric-box">
+          <span class="label">Cycles GC</span>
+          <div class="value" id="val-gc">-- <span class="unit">runs</span></div>
+        </div>
+      </div>
+
+      <!-- Alerte Pédagogique sur l'Effondrement des Perfs -->
+      <div class="audit-alert">
+        <strong>⚠️ Audit Séance 1 : Effondrement Détecté</strong>
+        10 000 agents accédés via <code>[]*Client</code> sur le Tas. Allocations dynamiques
+        par frame (~250 KB/tick) et balayage de distance brut (Cache Misses & CPU Stalls).
+      </div>
+
+      <!-- Population & Ébriété -->
+      <div class="section-card">
+        <div class="section-title">
+          <span>Clients au Bar (10 000)</span>
+          <span id="val-tick">Tick #0</span>
+        </div>
+
+        <div class="bar-wrapper">
+          <div class="bar-seg bar-sober" id="pbar-sober" style="width: 70%"></div>
+          <div class="bar-seg bar-drinking" id="pbar-drinking" style="width: 25%"></div>
+          <div class="bar-seg bar-vomiting" id="pbar-vomiting" style="width: 5%"></div>
+        </div>
+
+        <div class="row-stat">
+          <span>🔵 Sobres (En route) :</span>
+          <span id="val-sober" style="color: var(--accent-cyan)">0 (0%)</span>
+        </div>
+        <div class="row-stat">
+          <span>🍺 En train de boire :</span>
+          <span id="val-drinking" style="color: var(--accent-amber)">0 (0%)</span>
+        </div>
+        <div class="row-stat">
+          <span>🤮 En train de vomir :</span>
+          <span id="val-vomiting" style="color: var(--accent-green)">0 (0%)</span>
+        </div>
+      </div>
+
+      <!-- Statistiques Soirée -->
+      <div class="section-card">
+        <div class="section-title">Activité & Bilan Soirée</div>
+        <div class="row-stat">
+          <span>Pintes servies :</span>
+          <span id="val-beers" style="color: #fff">0</span>
+        </div>
+        <div class="row-stat">
+          <span>Mares de vomi actives :</span>
+          <span id="val-puddles" style="color: var(--accent-green)">0</span>
+        </div>
+        <div class="row-stat">
+          <span>Alcoolémie moyenne :</span>
+          <span id="val-alcohol" style="color: var(--accent-purple)">0.00 g/L</span>
+        </div>
+        <div class="row-stat">
+          <span>Graine MasterSeed :</span>
+          <span style="color: var(--text-muted)">42</span>
+        </div>
+      </div>
+
+      <!-- Légende Graphique -->
+      <div class="section-card">
+        <div class="section-title">Légende Visuelle</div>
+        <div class="legend-grid">
+          <div class="legend-item">
+            <div class="legend-color" style="background: var(--accent-cyan)"></div>
+            <span>Sobre</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color" style="background: var(--accent-amber)"></div>
+            <span>Boit une bière</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color" style="background: var(--accent-green)"></div>
+            <span>Vomit (Bloqué)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color" style="background: rgba(132, 204, 22, 0.6)"></div>
+            <span>Mare de vomi</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contrôles Interaction -->
+      <div class="controls-row">
+        <button class="btn btn-primary" id="btn-recenter">Recentrer Vue</button>
+        <button class="btn" id="btn-pause">Pause Affichage</button>
+      </div>
+    </aside>
+
+    <!-- Visualiseur 2D Haute Performance -->
+    <main id="viewport">
+      <canvas id="sim-canvas"></canvas>
+      <div class="canvas-overlay">
+        Glisser : <strong>Déplacer</strong> | Molette : <strong>Zoomer</strong>
+      </div>
+    </main>
+
+    <script>
+      const canvas = document.getElementById('sim-canvas');
+      const ctx = canvas.getContext('2d', { alpha: false });
+      const viewport = document.getElementById('viewport');
+
+      // Télémétrie DOM
+      const wsDot = document.getElementById('ws-dot');
+      const wsStatus = document.getElementById('ws-status');
+      const valTps = document.getElementById('val-tps');
+      const valTickTime = document.getElementById('val-ticktime');
+      const valHeap = document.getElementById('val-heap');
+      const valGc = document.getElementById('val-gc');
+      const valTick = document.getElementById('val-tick');
+      const valSober = document.getElementById('val-sober');
+      const valDrinking = document.getElementById('val-drinking');
+      const valVomiting = document.getElementById('val-vomiting');
+      const valBeers = document.getElementById('val-beers');
+      const valPuddles = document.getElementById('val-puddles');
+      const valAlcohol = document.getElementById('val-alcohol');
+      const pbarSober = document.getElementById('pbar-sober');
+      const pbarDrinking = document.getElementById('pbar-drinking');
+      const pbarVomiting = document.getElementById('pbar-vomiting');
+      const btnRecenter = document.getElementById('btn-recenter');
+      const btnPause = document.getElementById('btn-pause');
+
+      // État de la Caméra 2D
+      let camera = {
+        x: 0,
+        y: 0,
+        zoom: 1.0,
+        isDragging: false,
+        lastMouseX: 0,
+        lastMouseY: 0,
+      };
+
+      let isPaused = false;
+      let latestPayload = null;
+
+      function resizeCanvas() {
+        canvas.width = viewport.clientWidth;
+        canvas.height = viewport.clientHeight;
+        if (latestPayload) {
+          renderFrame(latestPayload);
+        }
+      }
+      window.addEventListener('resize', resizeCanvas);
+      resizeCanvas();
+
+      function autoCenterCamera(worldSize) {
+        if (!worldSize) worldSize = 2000;
+        const padding = 40;
+        const scaleX = (canvas.width - padding * 2) / worldSize;
+        const scaleY = (canvas.height - padding * 2) / worldSize;
+        camera.zoom = Math.min(scaleX, scaleY);
+        camera.x = (canvas.width - worldSize * camera.zoom) / 2;
+        camera.y = (canvas.height - worldSize * camera.zoom) / 2;
+      }
+
+      btnRecenter.addEventListener('click', () => {
+        if (latestPayload && latestPayload.world_size) {
+          autoCenterCamera(latestPayload.world_size);
+        }
+      });
+
+      btnPause.addEventListener('click', () => {
+        isPaused = !isPaused;
+        btnPause.innerText = isPaused ? 'Reprendre' : 'Pause Affichage';
+        btnPause.style.borderColor = isPaused ? 'var(--accent-red)' : '#334155';
+      });
+
+      // Contrôle de la souris (Pan & Zoom)
+      viewport.addEventListener('mousedown', (e) => {
+        camera.isDragging = true;
+        camera.lastMouseX = e.clientX;
+        camera.lastMouseY = e.clientY;
+      });
+
+      window.addEventListener('mouseup', () => {
+        camera.isDragging = false;
+      });
+
+      viewport.addEventListener('mousemove', (e) => {
+        if (camera.isDragging) {
+          const dx = e.clientX - camera.lastMouseX;
+          const dy = e.clientY - camera.lastMouseY;
+          camera.x += dx;
+          camera.y += dy;
+          camera.lastMouseX = e.clientX;
+          camera.lastMouseY = e.clientY;
+          if (latestPayload) renderFrame(latestPayload);
+        }
+      });
+
+      viewport.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const zoomFactor = e.deltaY < 0 ? 1.15 : 0.87;
+        const mouseX = e.clientX - viewport.getBoundingClientRect().left;
+        const mouseY = e.clientY - viewport.getBoundingClientRect().top;
+
+        camera.x = mouseX - (mouseX - camera.x) * zoomFactor;
+        camera.y = mouseY - (mouseY - camera.y) * zoomFactor;
+        camera.zoom *= zoomFactor;
+        if (latestPayload) renderFrame(latestPayload);
+      });
+
+      // ---------------- Rendu Graphique ----------------
+      function renderFrame(payload) {
+        const { stats, world_size, bars, puddles, clients } = payload;
+
+        ctx.fillStyle = '#05070b';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.save();
+        ctx.translate(camera.x, camera.y);
+        ctx.scale(camera.zoom, camera.zoom);
+
+        // 1. Sol du Bar
+        ctx.fillStyle = '#0a0e17';
+        ctx.fillRect(0, 0, world_size, world_size);
+
+        // Grille de carrelage subtile
+        ctx.strokeStyle = '#121826';
+        ctx.lineWidth = 1;
+        const tileSize = 100;
+        for (let x = 0; x <= world_size; x += tileSize) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, world_size);
+          ctx.stroke();
+        }
+        for (let y = 0; y <= world_size; y += tileSize) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(world_size, y);
+          ctx.stroke();
+        }
+
+        // Murs extérieurs néon
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 6;
+        ctx.strokeRect(0, 0, world_size, world_size);
+
+        // 2. Flaques de Vomi (Puddles)
+        if (puddles && puddles.length > 0) {
+          for (let i = 0; i < puddles.length; i++) {
+            const p = puddles[i];
+            const alpha = Math.min(0.65, (p.remaining_ticks / 180.0) * 0.7);
+            ctx.fillStyle = `rgba(132, 204, 22, ${alpha})`;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Bordure toxique
+            ctx.strokeStyle = `rgba(163, 230, 53, ${alpha * 0.8})`;
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+          }
+        }
+
+        // 3. Comptoirs de Bar
+        if (bars && bars.length > 0) {
+          for (let i = 0; i < bars.length; i++) {
+            const b = bars[i];
+            // Fond comptoir bois / ambre
+            ctx.fillStyle = '#78350f';
+            ctx.fillRect(b.x, b.y, b.w, b.h);
+
+            // Contour néon ambre
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(b.x, b.y, b.w, b.h);
+
+            // Nom du comptoir
+            ctx.fillStyle = '#fef3c7';
+            ctx.font = '14px monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(b.name, b.x + b.w / 2, b.y + b.h / 2 - 8);
+
+            // Pintes servies
+            ctx.fillStyle = '#cbd5e1';
+            ctx.font = '11px monospace';
+            ctx.fillText(`🍺 ${b.beers_served}`, b.x + b.w / 2, b.y + b.h / 2 + 10);
+          }
+        }
+
+        // 4. 10 000 Clients (Rendu ultra-rapide par particules)
+        if (clients && clients.length > 0) {
+          const clientRadius = 2.4;
+          for (let i = 0; i < clients.length; i++) {
+            const c = clients[i];
+            ctx.beginPath();
+            ctx.arc(c.x, c.y, clientRadius, 0, Math.PI * 2);
+
+            switch (c.s) {
+              case 0: // Sober
+                ctx.fillStyle = '#06b6d4';
+                break;
+              case 1: // Drinking
+                ctx.fillStyle = '#f59e0b';
+                break;
+              case 2: // Vomiting
+                ctx.fillStyle = '#22c55e';
+                break;
+              default:
+                ctx.fillStyle = '#94a3b8';
+            }
+            ctx.fill();
+          }
+        }
+
+        ctx.restore();
+      }
+
+      // ---------------- Connexion WebSocket ----------------
+      function connectWebSocket() {
+        const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${location.host}/ws`;
+        const socket = new WebSocket(wsUrl);
+
+        let initialCentered = false;
+
+        socket.onopen = () => {
+          wsDot.classList.add('live');
+          wsStatus.innerText = 'Connecté (Live)';
+        };
+
+        socket.onmessage = (event) => {
+          try {
+            const payload = JSON.parse(event.data);
+            latestPayload = payload;
+
+            if (!initialCentered && payload.world_size) {
+              autoCenterCamera(payload.world_size);
+              initialCentered = true;
+            }
+
+            // Mise à jour de la télémétrie UI
+            updateHUD(payload.stats);
+
+            if (!isPaused) {
+              renderFrame(payload);
+            }
+          } catch (err) {
+            console.error('Erreur de parsing payload WebSocket', err);
+          }
+        };
+
+        socket.onclose = () => {
+          wsDot.classList.remove('live');
+          wsStatus.innerText = 'Déconnecté - Reconnexion...';
+          setTimeout(connectWebSocket, 2000);
+        };
+
+        socket.onerror = (err) => {
+          console.error('Erreur socket', err);
+          socket.close();
+        };
+      }
+
+      function updateHUD(stats) {
+        valTps.innerText = stats.tps;
+        if (stats.tps < 18) {
+          valTps.className = 'value tps-alert';
+        } else {
+          valTps.className = 'value tps-ok';
+        }
+
+        valTickTime.innerText = stats.tick_duration_ms.toFixed(1);
+        valHeap.innerText = stats.heap_alloc_mb.toFixed(1);
+        valGc.innerText = stats.num_gc;
+        valTick.innerText = `Tick #${stats.tick}`;
+
+        const total = stats.total_clients || 10000;
+        const pSober = ((stats.sober_count / total) * 100).toFixed(0);
+        const pDrinking = ((stats.drinking_count / total) * 100).toFixed(0);
+        const pVomiting = ((stats.vomiting_count / total) * 100).toFixed(0);
+
+        valSober.innerText = `${stats.sober_count} (${pSober}%)`;
+        valDrinking.innerText = `${stats.drinking_count} (${pDrinking}%)`;
+        valVomiting.innerText = `${stats.vomiting_count} (${pVomiting}%)`;
+
+        pbarSober.style.width = `${pSober}%`;
+        pbarDrinking.style.width = `${pDrinking}%`;
+        pbarVomiting.style.width = `${pVomiting}%`;
+
+        valBeers.innerText = stats.beers_served.toLocaleString('fr-FR');
+        valPuddles.innerText = stats.active_puddles;
+        valAlcohol.innerText = `${stats.avg_alcohol.toFixed(2)} g/L`;
+      }
+
+      connectWebSocket();
+    </script>
+  </body>
+</html>
