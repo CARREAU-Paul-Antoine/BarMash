@@ -1,0 +1,18 @@
+# Binaires et exécutables compilés
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+
+# Fichiers de test
+*.test
+*.out
+
+# IDEs et fichiers système
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
