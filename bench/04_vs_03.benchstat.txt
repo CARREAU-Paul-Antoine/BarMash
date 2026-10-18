@@ -1,0 +1,32 @@
+goos: windows
+goarch: amd64
+pkg: barmash
+cpu: AMD Ryzen 7 9700X 8-Core Processor             
+                                │ bench/03_hot_cold.txt │      bench/04_zero_alloc.txt       │
+                                │        sec/op         │   sec/op     vs base               │
+UpdateSimulation/phase=early-16             1.182m ± 4%   1.065m ± 3%  -9.90% (p=0.000 n=10)
+UpdateSimulation/phase=rush-16              1.597m ± 2%   1.500m ± 1%  -6.09% (p=0.000 n=10)
+BuildFrame-16                               1.231m ± 5%   1.278m ± 4%       ~ (p=0.218 n=10)
+geomean                                     1.325m        1.269m       -4.24%
+
+                                │ bench/03_hot_cold.txt │          bench/04_zero_alloc.txt          │
+                                │         B/op          │     B/op      vs base                     │
+UpdateSimulation/phase=early-16            423.3Ki ± 1%     0.0Ki ± 0%  -100.00% (p=0.000 n=10)
+UpdateSimulation/phase=rush-16             412.6Ki ± 0%     0.0Ki ± 0%  -100.00% (p=0.000 n=10)
+BuildFrame-16                              573.8Ki ± 3%   608.7Ki ± 3%    +6.07% (p=0.000 n=10)
+geomean                                    464.5Ki                      ?                       ¹ ²
+¹ summaries must be >0 to compute geomean
+² ratios must be >0 to compute geomean
+
+                                │ bench/03_hot_cold.txt │          bench/04_zero_alloc.txt          │
+                                │       allocs/op       │  allocs/op    vs base                     │
+UpdateSimulation/phase=early-16             3.385k ± 1%   0.000k ±  0%  -100.00% (p=0.000 n=10)
+UpdateSimulation/phase=rush-16              3.300k ± 0%   0.000k ±  0%  -100.00% (p=0.000 n=10)
+BuildFrame-16                                6.000 ± 0%    7.000 ± 14%   +16.67% (p=0.005 n=10)
+geomean                                      406.2                      ?                       ¹ ²
+¹ summaries must be >0 to compute geomean
+² ratios must be >0 to compute geomean
+
+              │ bench/03_hot_cold.txt │       bench/04_zero_alloc.txt       │
+              │      bytes/frame      │ bytes/frame   vs base               │
+BuildFrame-16            360.0Ki ± 0%   360.0Ki ± 0%  -0.00% (p=0.000 n=10)

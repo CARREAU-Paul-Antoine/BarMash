@@ -118,12 +118,6 @@ const PuddleLifetimeTicks = VomitDurationTicks * 2
 // MaxPuddlesCapacity dimensionne la tranche des flaques une fois pour toutes (~460 flaques en croisière).
 const MaxPuddlesCapacity = 2048
 
-// BarDistance structure temporaire allouée dynamiquement pour chaque calcul de distance
-type BarDistance struct {
-	BarID    int
-	Distance float64
-}
-
 // -----------------------------------------------------------------------------
 // Télémétrie & Payloads WebSocket
 // -----------------------------------------------------------------------------
@@ -169,8 +163,9 @@ type FramePayload struct {
 
 var (
 	simRng          *rand.Rand
-	clients         []Client // Tranche contiguë de valeurs (données froides)
-	positions       []Vec2   // positions[i] = position du client i (données chaudes)
+	clients         []Client              // Tranche contiguë de valeurs (données froides)
+	positions       []Vec2                // positions[i] = position du client i (données chaudes)
+	barCenters      [BarCounterCount]Vec2 // Centres des comptoirs, invariants : précalculés à l'init
 	bars            []BarCounter
 	vomitPuddles    []VomitPuddle // Flaques actives, contiguës et triées par ExpireTick croissant
 	puddleIdSeq     int64
@@ -198,6 +193,9 @@ func initSimulation(seed int64) {
 		{ID: 5, Name: "Tireuse Est 2", X: WorldSize - 160, Y: WorldSize * 0.65, W: 60, H: 200},
 		{ID: 6, Name: "Comptoir VIP Nord", X: WorldSize*0.3 - 80, Y: 100, W: 160, H: 60},
 		{ID: 7, Name: "Comptoir VIP Sud", X: WorldSize*0.7 - 80, Y: WorldSize - 160, W: 160, H: 60},
+	}
+	for b := range bars {
+		barCenters[b] = Vec2{X: bars[b].X + bars[b].W*0.5, Y: bars[b].Y + bars[b].H*0.5}
 	}
 
 	// Deux tranches contiguës allouées une seule fois (ordre des tirages RNG inchangé)
@@ -284,9 +282,6 @@ func updateSimulation() {
 			scanStep = 1
 		}
 
-		// Allocation inutile d'une tranche de voisinage (Heap Escape)
-		neighborsCrowd := make([]float64, 0, 8)
-
 		px, py := pos.X, pos.Y
 		for nIdx := (i * 7) % scanStep; nIdx < len(positions); nIdx += scanStep {
 			if nIdx == i {
@@ -312,10 +307,8 @@ func updateSimulation() {
 				repelFactor := (22.0 - nDist) / 22.0
 				pushX += (ndx / nDist) * repelFactor * 1.0
 				pushY += (ndy / nDist) * repelFactor * 1.0
-				neighborsCrowd = append(neighborsCrowd, nDist)
 			}
 		}
-		_ = len(neighborsCrowd) // Empêche l'élimination par le compilateur
 
 		// Amortissement de la poussée pour éviter les saccades excessives
 		pushDist := math.Sqrt(pushX*pushX + pushY*pushY)
@@ -416,37 +409,29 @@ func updateSimulation() {
 			} else {
 				// Le client a soif et se dirige activement vers un comptoir de bar !
 
-				// ANTI-PATTERN 3 : Recherche Naïve du Bar le Plus Proche avec make()
-				// Création d'une tranche temporaire de distances sur le tas à chaque tick
-				barDistances := make([]BarDistance, len(bars))
+				// O4 : Recherche du bar le plus proche sans allocation, sur les centres
+				// précalculés (tableau de 128 o, 2 lignes de cache). La distance et le
+				// vecteur du gagnant sont réutilisés : même expression flottante, une
+				// racine carrée en moins.
 				nearestBarIdx := 0
-				minDist := math.MaxFloat64
+				distToBar := math.MaxFloat64
+				dirX, dirY := 0.0, 0.0
 
-				for bIdx := 0; bIdx < len(bars); bIdx++ {
-					bx := bars[bIdx].X + bars[bIdx].W*0.5
-					by := bars[bIdx].Y + bars[bIdx].H*0.5
-					dx := bx - pos.X
-					dy := by - pos.Y
+				for bIdx := range barCenters {
+					dx := barCenters[bIdx].X - pos.X
+					dy := barCenters[bIdx].Y - pos.Y
 					d := math.Sqrt(dx*dx + dy*dy)
 
-					barDistances[bIdx] = BarDistance{
-						BarID:    bIdx,
-						Distance: d,
-					}
-
-					if d < minDist {
-						minDist = d
+					if d < distToBar {
+						distToBar = d
 						nearestBarIdx = bIdx
+						dirX, dirY = dx, dy
 					}
 				}
 
 				targetBar := &bars[nearestBarIdx]
-				targetCenterX := targetBar.X + targetBar.W*0.5
-				targetCenterY := targetBar.Y + targetBar.H*0.5
-
-				dirX := targetCenterX - pos.X
-				dirY := targetCenterY - pos.Y
-				distToBar := math.Sqrt(dirX*dirX + dirY*dirY)
+				targetCenterX := barCenters[nearestBarIdx].X
+				targetCenterY := barCenters[nearestBarIdx].Y
 
 				if distToBar <= ServingRadius {
 					// Arrivée au comptoir : commande servie !
