@@ -135,8 +135,13 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
+	// BARMASH_DB / BARMASH_DB_NOINDEX servent aux tests de charge (base pré-remplie, avec ou sans index).
+	dbPath := DBPath
+	if p := os.Getenv("BARMASH_DB"); p != "" {
+		dbPath = p
+	}
 	if err := os.MkdirAll("data", 0o755); err == nil {
-		if s, err := openTelemetryStore(DBPath, true); err == nil {
+		if s, err := openTelemetryStore(dbPath, os.Getenv("BARMASH_DB_NOINDEX") == ""); err == nil {
 			store = s
 			store.Start(ctx)
 		} else {

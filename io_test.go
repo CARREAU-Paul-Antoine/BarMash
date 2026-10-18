@@ -7,6 +7,7 @@ import (
 	"math"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -217,4 +218,20 @@ func BenchmarkHistoryHandler(b *testing.B) {
 			}
 		})
 	}
+}
+
+// TestSeedLoadTestDB prépare une base de 200 000 lignes pour le test de charge HTTP (Vegeta).
+// Ignoré sauf si BARMASH_SEED_DB désigne le fichier à créer ; BARMASH_DB_NOINDEX=1 crée la table sans index.
+func TestSeedLoadTestDB(t *testing.T) {
+	path := os.Getenv("BARMASH_SEED_DB")
+	if path == "" {
+		t.Skip("BARMASH_SEED_DB non défini")
+	}
+	s, err := openTelemetryStore(path, os.Getenv("BARMASH_DB_NOINDEX") == "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	seedStore(t, s)
+	t.Logf("%s : %d lignes, plan : %s", path, seedSessions*seedRowsPerSession, queryPlan(t, s))
 }

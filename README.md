@@ -107,4 +107,4 @@ go tool pprof -http=:8081 cpu.pprof
 curl -o cpu.pprof "http://localhost:6060/debug/pprof/profile?seconds=20"
 ```
 
-Campagne complète baseline vs version finale en une commande (tests, benchstat, Hyperfine, profils) : `./run_benchmarks.sh` (résultats dans `perf/campaign/`).
+Campagne complète baseline vs version finale en une commande (tests, benchstat, workers, I/O, Hyperfine, profils, test de charge) : `./run_benchmarks.sh` (résultats dans `perf/campaign/`). Test de charge HTTP seul (Vegeta, p50/p95/p99 de `/api/history` avec et sans index) : `perf/load_test.sh`.

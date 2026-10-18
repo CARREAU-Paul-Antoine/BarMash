@@ -1,0 +1,9 @@
+Requests      [total, rate, throughput]         7500, 500.09, 9.20
+Duration      [total, attack, wait]             44.998s, 14.997s, 30s
+Latencies     [min, mean, 50, 90, 95, 99, max]  175.36ms, 28.686s, 30s, 30.001s, 30.001s, 30.001s, 30.001s
+Bytes In      [total, mean]                     214852338, 28646.98
+Bytes Out     [total, mean]                     0, 0.00
+Success       [ratio]                           5.52%
+Status Codes  [code:count]                      0:7086  200:414  
+Error Set:
+Get "http://localhost:8080/api/history?session=25&from=0&to=119970": context deadline exceeded (Client.Timeout exceeded while awaiting headers)

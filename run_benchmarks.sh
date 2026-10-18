@@ -4,7 +4,7 @@
 #   ./run_benchmarks.sh            # campagne complète (~15 min)
 #   TICKS=2000 RUNS=5 COUNT=5 ./run_benchmarks.sh
 #
-# Prérequis : go, benchstat (golang.org/x/perf/cmd/benchstat), hyperfine.
+# Prérequis : go, benchstat (golang.org/x/perf/cmd/benchstat), hyperfine ; vegeta en option.
 set -euo pipefail
 
 BASELINE_REF=${BASELINE_REF:-343a4ee}   # Moteur naïf + protocole de mesure, avant toute optimisation
@@ -81,3 +81,10 @@ unset BARMASH_TICKS
 echo
 echo "Résultats dans $OUT"
 echo "Flamegraph interactif : go tool pprof -http=:8081 $BIN/barmash_final$EXE $OUT/final_cpu.pprof"
+
+echo "== Bonus : test de charge HTTP /api/history (Vegeta, p50/p95/p99)"
+if command -v vegeta >/dev/null; then
+	"$ROOT/perf/load_test.sh"
+else
+	echo "vegeta absent : étape ignorée (go install github.com/tsenart/vegeta/v12@latest)"
+fi

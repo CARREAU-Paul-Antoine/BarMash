@@ -96,7 +96,7 @@
     <tr><td>1</td><td><b>Scan des flaques</b> — chaque client teste chaque flaque</td><td class="num"><b>38,6 %</b></td><td class="num"><b>~60 %</b></td><td>O(N × P) : 10 000 × ~450 = 4,5 M tests et racines carrées par tick</td></tr>
     <tr><td>1</td><td><b>Scan de bousculade</b> — 60 voisins par client</td><td class="num"><b>32,0 %</b></td><td class="num"><b>~33 %</b></td><td>600 k lectures de <code>*Client</code> de 96 o via pointeurs ; <code>math.Sqrt</code> sur tous les voisins</td></tr>
     <tr><td>2</td><td>Trigonométrie du déplacement</td><td class="num">5,4 %</td><td class="num">~5 %</td><td><code>math.Cos</code> + <code>math.Sin</code> séparés pour chaque client mobile</td></tr>
-    <tr><td>3</td><td>Allocations dans la boucle</td><td class="num">2,3 %</td><td class="num">~2 %</td><td><code>makeslice</code> : <code>make([]BarDistance)</code>, <code>neighborsCrowd</code></td></tr>
+    <tr><td>3</td><td>Allocations dans la boucle</td><td class="num">2,3 %</td><td class="num">~2 %</td><td><code>makeslice</code> : <code>make([]BarDistance)</code>, 99,2 % des octets alloués (profil ci-dessous)</td></tr>
     <tr><td>4</td><td>Garbage Collector (balayage + marquage)</td><td class="num">4,7 %</td><td class="num">—</td><td><code>bgsweep</code> 3,8 % + <code>gcBgMarkWorker</code> 0,9 % : conséquence directe de 3</td></tr>
     <tr><td></td><td>Recherche du bar le plus proche</td><td class="num">2,9 %</td><td class="num">—</td><td>8 racines carrées par client assoiffé</td></tr>
   </table>
@@ -111,6 +111,11 @@
     <tr><td>5 000 ticks sans serveur</td><td class="num">647 cycles GC • 1 820 Mo alloués</td><td>Soit ~364 Ko de déchets par tick, collectés en continu (repère 4)</td></tr>
     <tr><td>Serveur réel, 25 s</td><td class="num">493 cycles GC</td><td>S'y ajoute <code>runtime.ReadMemStats</code> (pause Stop-The-World) à chaque tick</td></tr>
   </table>
+<pre><span class="c"># Profil d'allocations réel de la baseline (5 000 ticks), attribué par ligne de source</span>
+$ go tool pprof -sample_index=alloc_space -top -lines barmash_baseline.exe baseline_allocs.pprof
+      flat  flat%    cum   cum%
+    1.78GB 99.20%  1.78GB 99.20%  main.updateSimulation main.go:409   <span class="c">← barDistances := make([]BarDistance, len(bars))</span>
+<span class="c"># alloc_objects : 14 915 356 objets (99,68 %) sur la même ligne — une tranche écrite mais jamais relue</span></pre>
 
   <div class="box note">
     <h4>Lecture</h4>
@@ -168,7 +173,7 @@
       <g><text x="100" y="145" text-anchor="end">O9 8 workers</text><rect x="110" y="137" width="36" height="10" rx="2" fill="#2a78d6"/><text class="val" x="152" y="145">0,61 ms</text></g>
     </g>
   </svg>
-  <p class="small muted">Médianes benchstat mesurées étape par étape. Deux actions font l'essentiel : O2 (−66 %, le plateau le plus large du profil) puis O9 (−55 %). Le comparatif final (section 5) est refait dans une même session.</p>
+  <p class="small muted">Médianes benchstat mesurées étape par étape. Deux actions font l'essentiel : O2 (−66 %, le plateau le plus large du profil) puis O9 (−55 %). Le comparatif final (section 6) est refait dans une même session.</p>
 </section>
 
 <!-- ===================================================== 4. CONCURRENCE, ÉCHECS, REPRO -->
@@ -233,14 +238,61 @@
   </div>
 
   <h3>Reproduire la campagne en une commande</h3>
-<pre><span class="c"># Prérequis : Go 1.27, benchstat, hyperfine. Durée ~15 min. Résultats dans perf/campaign/</span>
+<pre><span class="c"># Prérequis : Go 1.27, benchstat, hyperfine (vegeta en option). Durée ~16 min. Résultats dans perf/campaign/</span>
 ./run_benchmarks.sh</pre>
-  <p class="small muted" style="margin:0">Le script reconstruit la baseline depuis git (<code>343a4ee</code>) avec le même harnais headless, lance les tests, les benchmarks des deux versions dans la même session (benchstat), la montée en charge des workers, les mesures I/O et les plans de requête, Hyperfine, puis les profils pprof. Un commit par lot d'optimisation, séries brutes dans <code>perf/bench/</code>. Règles imposées aux assistants IA : <code>constitution.md</code>.</p>
+  <p class="small muted" style="margin:0">Le script reconstruit la baseline depuis git (<code>343a4ee</code>) avec le même harnais headless, lance les tests, les benchmarks des deux versions dans la même session (benchstat), la montée en charge des workers, les mesures I/O et les plans de requête, Hyperfine, les profils pprof, puis le test de charge HTTP (<code>perf/load_test.sh</code>). Un commit par lot d'optimisation, séries brutes dans <code>perf/bench/</code>. Règles imposées aux assistants IA : <code>constitution.md</code>.</p>
 </section>
 
-<!-- ===================================================== 5. SYNTHÈSE -->
+<!-- ===================================================== 5. VALIDATION SOUS CHARGE -->
 <section class="page">
-  <div class="runhead"><h2>5. Synthèse et conclusion</h2><span>BarMash • Audit de performance</span></div>
+  <div class="runhead"><h2>5. Validation sous charge et I/O</h2><span>BarMash • Audit de performance</span></div>
+
+  <h3>Test de charge HTTP de <code>/api/history</code> (Vegeta, 15 s par palier)</h3>
+  <p class="small">Requête : export complet d'une session (4 000 lignes, ~1 h de simulation) parmi 50, dans une base de 200 000 lignes. Même serveur, même requête ; seule change la présence de l'index <code>(session_id, tick)</code>.</p>
+  <table>
+    <tr><th>Base</th><th class="num">Débit demandé</th><th class="num">Débit servi</th><th class="num">Succès</th><th class="num">p50</th><th class="num">p95</th><th class="num">p99</th><th class="num">max</th></tr>
+    <tr class="total"><td>Avec index</td><td class="num">500 req/s</td><td class="num">499,9 req/s</td><td class="num">100 %</td><td class="num">4,25 ms</td><td class="num">7,22 ms</td><td class="num">13,38 ms</td><td class="num">39,3 ms</td></tr>
+    <tr><td>Sans index</td><td class="num">50 req/s</td><td class="num">50,0 req/s</td><td class="num">100 %</td><td class="num">16,21 ms</td><td class="num">18,78 ms</td><td class="num">21,50 ms</td><td class="num">38,7 ms</td></tr>
+    <tr><td>Sans index</td><td class="num">500 req/s</td><td class="num loss">9,2 req/s</td><td class="num loss">5,5 %</td><td class="num loss">30 s</td><td class="num loss">30 s</td><td class="num loss">30 s</td><td class="num loss">30 s</td></tr>
+  </table>
+  <p class="small muted">Sans index, chaque requête parcourt les 200 000 lignes puis trie le résultat. Le serveur tient 50 req/s, mais s'effondre à 500 req/s : 94,5 % des requêtes tombent en timeout (30 s) et le débit servi chute à 9 req/s. Avec l'index, le même débit passe avec un p99 de 13 ms. Les latences sous la milliseconde ne sont pas mesurables sous Windows (résolution de l'horloge Go ~0,5 ms), d'où le choix d'une requête lourde.</p>
+
+<pre><span class="c"># EXPLAIN QUERY PLAN — SQLite n'a pas d'EXPLAIN ANALYZE ; les durées viennent des benchmarks ci-dessus</span>
+sans index : SCAN telemetry | USE TEMP B-TREE FOR ORDER BY
+avec index : SEARCH telemetry USING INDEX idx_telemetry_session_tick (session_id=? AND tick&gt;? AND tick&lt;?)</pre>
+
+  <div class="two">
+    <div class="box note">
+      <h4>Frame binaire : pourquoi pas Protobuf</h4>
+      <ul class="small">
+        <li>Toutes les valeurs ont une taille fixe et connue (positions sur 16 bits, état sur 8 bits) : un format à offsets fixes se lit directement avec un <code>DataView</code>, sans parseur.</li>
+        <li>Protobuf avec un message par client coûte ~12 o par client (étiquette + varint par champ) ; en champs <code>packed</code>, on retombe à ~6–7 o, soit la même taille, mais avec une bibliothèque, une étape de génération et un décodage varint côté navigateur.</li>
+        <li>Le format est versionné (octet 0) ; les données statiques partent une fois dans un message <code>init</code>.</li>
+      </ul>
+      <table>
+        <tr><th>Frame (croisière)</th><th class="num">Taille</th><th class="num">Encodage</th></tr>
+        <tr><td>JSON naïf (<code>json.Marshal</code>)</td><td class="num">360 Ko</td><td class="num">1,185 ms</td></tr>
+        <tr><td>JSON append-only (O6)</td><td class="num">360 Ko</td><td class="num">130 µs</td></tr>
+        <tr class="total"><td>Binaire (O10)</td><td class="num">61 Ko</td><td class="num">29 µs</td></tr>
+      </table>
+    </div>
+    <div class="box note">
+      <h4>Serveur réel : 25 s avec un client WebSocket</h4>
+      <table>
+        <tr><th>Mesure</th><th class="num">Naïf</th><th class="num">Final</th></tr>
+        <tr><td>Frames reçues</td><td class="num">30 /s</td><td class="num">30 /s</td></tr>
+        <tr><td>Taille moyenne d'une frame</td><td class="num">310 Ko</td><td class="num">59 Ko</td></tr>
+        <tr><td>CPU consommé (profil live 20 s)</td><td class="num">2 670 ms</td><td class="num gain">990 ms</td></tr>
+        <tr><td>Cycles de GC</td><td class="num">493</td><td class="num gain">2</td></tr>
+      </table>
+      <p class="small" style="margin:0">Avant la parallélisation, la version finale consommait 840 ms : les 8 workers ajoutent un peu de CPU cumulé (réveil et synchronisation à chaque tick) en échange d'une latence de tick divisée par 2,2. L'écriture SQLite, asynchrone, n'apparaît pas dans le profil du tick.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== 6. SYNTHÈSE -->
+<section class="page">
+  <div class="runhead"><h2>6. Synthèse et conclusion</h2><span>BarMash • Audit de performance</span></div>
 
   <div class="kpis">
     <div class="kpi"><div class="v">×10,4</div><div class="l">Tick en croisière plus rapide</div></div>

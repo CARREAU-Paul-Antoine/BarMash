@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>BarMash : La Tournée Infernale • Simulation Haute Charge (Naïve)</title>
+    <title>BarMash : La Tournée Infernale • Simulation Haute Charge</title>
     <style>
       :root {
         --bg-main: #07090e;
@@ -67,9 +67,9 @@
       }
 
       .badge-naive {
-        background: rgba(239, 68, 68, 0.15);
-        color: var(--accent-red);
-        border: 1px solid var(--accent-red);
+        background: rgba(34, 197, 94, 0.15);
+        color: var(--accent-green);
+        border: 1px solid var(--accent-green);
         font-size: 0.65rem;
         padding: 2px 6px;
         border-radius: 4px;
@@ -141,13 +141,13 @@
 
       /* Diagnostics Notice */
       .audit-alert {
-        background: rgba(239, 68, 68, 0.08);
-        border: 1px solid rgba(239, 68, 68, 0.3);
+        background: rgba(34, 197, 94, 0.08);
+        border: 1px solid rgba(34, 197, 94, 0.3);
         border-radius: 6px;
         padding: 10px;
         font-size: 0.72rem;
         line-height: 1.4;
-        color: #fca5a5;
+        color: #86efac;
       }
       .audit-alert strong {
         color: #fff;
@@ -299,7 +299,7 @@
     <aside id="sidebar">
       <div class="header-title">
         <h1>🍺 BarMash</h1>
-        <span class="badge-naive">Moteur Naïf O(N²)</span>
+        <span class="badge-naive">Moteur optimisé</span>
       </div>
 
       <div class="status-pill">
@@ -327,11 +327,11 @@
         </div>
       </div>
 
-      <!-- Alerte Pédagogique sur l'Effondrement des Perfs -->
+      <!-- Résumé de l'audit de performance -->
       <div class="audit-alert">
-        <strong>⚠️ Audit Séance 1 : Effondrement Détecté</strong>
-        10 000 agents accédés via <code>[]*Client</code> sur le Tas. Allocations dynamiques
-        par frame (~250 KB/tick) et balayage de distance brut (Cache Misses & CPU Stalls).
+        <strong>Audit de performance : version optimisée</strong>
+        Tick en deux phases sur 8 workers, 0 allocation par tick, frames binaires
+        de 61 Ko (contre 360 Ko en JSON). Détail : docs/RAPPORT_AUDIT.pdf.
       </div>
 
       <!-- Population & Ébriété -->
