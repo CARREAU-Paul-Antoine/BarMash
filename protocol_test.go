@@ -42,9 +42,10 @@ func stateChecksum() uint64 {
 	}
 	putF := func(f float64) { put(math.Float64bits(f)) }
 
-	for _, c := range clients {
-		putF(c.X)
-		putF(c.Y)
+	for i := range clients {
+		c := &clients[i]
+		putF(positions[i].X)
+		putF(positions[i].Y)
 		putF(c.Speed)
 		putF(c.Alcohol)
 		putF(c.Stamina)
@@ -92,6 +93,7 @@ func TestGoldenChecksum(t *testing.T) {
 type simSnapshot struct {
 	tick        int64
 	clients     []Client
+	positions   []Vec2
 	puddles     []VomitPuddle
 	bars        []BarCounter
 	puddleIdSeq int64
@@ -101,23 +103,20 @@ type simSnapshot struct {
 func takeSnapshot() *simSnapshot {
 	s := &simSnapshot{
 		tick:        currentTick,
-		clients:     make([]Client, len(clients)),
+		clients:     append([]Client(nil), clients...),
+		positions:   append([]Vec2(nil), positions...),
 		puddles:     append([]VomitPuddle(nil), vomitPuddles...),
 		bars:        append([]BarCounter(nil), bars...),
 		puddleIdSeq: puddleIdSeq,
 		beers:       totalBeersCount,
-	}
-	for i, c := range clients {
-		s.clients[i] = *c
 	}
 	return s
 }
 
 // restore réinjecte le snapshot ; le RNG est réensemencé de façon déterministe.
 func (s *simSnapshot) restore() {
-	for i := range s.clients {
-		*clients[i] = s.clients[i]
-	}
+	copy(clients, s.clients)
+	copy(positions, s.positions)
 	vomitPuddles = append(vomitPuddles[:0], s.puddles...)
 	copy(bars, s.bars)
 	currentTick = s.tick

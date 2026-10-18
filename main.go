@@ -69,12 +69,16 @@ func (s ClientState) String() string {
 	}
 }
 
-// Client modélise un fêtard dans le bar.
-// ANTI-PATTERN ÉDUCATIF : Les instances sont dispersées sur le Tas (Heap)
-// et accédées via des pointeurs []*Client, provoquant de nombreux sauts mémoire (Cache Misses).
+// Vec2 est la donnée chaude du client : lue 60 fois par tick par le scan de bousculade.
+// 4 positions par ligne de cache de 64 o ; 10 000 positions = 160 Ko, résidentes en L2.
+type Vec2 struct {
+	X, Y float64
+}
+
+// Client modélise un fêtard dans le bar (données froides et tièdes, lues une fois par tick).
+// O3 : la position est séparée dans la tranche contiguë positions (séparation chaud/froid).
 type Client struct {
 	ID             int64
-	X, Y           float64
 	Speed          float64
 	Alcohol        float64 // Alcoolémie en g/L (augmente avec les bières)
 	Stamina        float64 // Jauge d'endurance (0.0 - 100.0)
@@ -165,7 +169,8 @@ type FramePayload struct {
 
 var (
 	simRng          *rand.Rand
-	clients         []*Client // Tranche de pointeurs dispersés (Heap Churn)
+	clients         []Client // Tranche contiguë de valeurs (données froides)
+	positions       []Vec2   // positions[i] = position du client i (données chaudes)
 	bars            []BarCounter
 	vomitPuddles    []VomitPuddle // Flaques actives, contiguës et triées par ExpireTick croissant
 	puddleIdSeq     int64
@@ -195,14 +200,15 @@ func initSimulation(seed int64) {
 		{ID: 7, Name: "Comptoir VIP Sud", X: WorldSize*0.7 - 80, Y: WorldSize - 160, W: 160, H: 60},
 	}
 
-	// Instanciation naïve des 10 000 clients individuellement sur le Tas
-	clients = make([]*Client, TotalClients)
+	// Deux tranches contiguës allouées une seule fois (ordre des tirages RNG inchangé)
+	clients = make([]Client, TotalClients)
+	positions = make([]Vec2, TotalClients)
 	for i := 0; i < TotalClients; i++ {
-		c := new(Client)
+		c := &clients[i]
 		c.ID = int64(i)
 		// Répartition initiale pseudo-aléatoire dans le bar
-		c.X = 150.0 + simRng.Float64()*(WorldSize-300.0)
-		c.Y = 150.0 + simRng.Float64()*(WorldSize-300.0)
+		positions[i].X = 150.0 + simRng.Float64()*(WorldSize-300.0)
+		positions[i].Y = 150.0 + simRng.Float64()*(WorldSize-300.0)
 		c.Speed = DefaultClientSpeed * (0.85 + simRng.Float64()*0.4)
 		c.Alcohol = simRng.Float64() * 0.15 // Commence sobre
 		c.Stamina = MaxStamina - simRng.Float64()*10.0
@@ -214,8 +220,6 @@ func initSimulation(seed int64) {
 		c.TargetBarID = simRng.Intn(len(bars))
 		c.DrinksConsumed = 0
 		c.WanderAngle = simRng.Float64() * 2 * math.Pi
-
-		clients[i] = c
 	}
 }
 
@@ -242,10 +246,11 @@ func updateSimulation() {
 	}
 	buildPuddleIndex()
 
-	// ANTI-PATTERN 2 : Parcours de 10 000 pointeurs dispersés []*Client
-	// Le processeur ne peut pas anticiper les adresses des structures Client (Prefetcher inefficace).
+	// O3 : Parcours séquentiel de deux tranches contiguës : données froides (clients)
+	// et données chaudes (positions), lues dans l'ordre par le prefetcher matériel.
 	for i := 0; i < len(clients); i++ {
-		c := clients[i]
+		c := &clients[i]
+		pos := &positions[i]
 
 		// Élimination métabolique naturelle de l'alcool (~0.01 g/L par seconde)
 		if c.Alcohol > 0 {
@@ -257,7 +262,7 @@ func updateSimulation() {
 		// ---------------------------------------------------------------------
 		isTrappedInVomit, isSmellingVomit := false, false
 		if len(vomitPuddles) > 0 { // Fast-path : aucun appel en début de soirée
-			isTrappedInVomit, isSmellingVomit = probePuddles(c.X, c.Y)
+			isTrappedInVomit, isSmellingVomit = probePuddles(pos.X, pos.Y)
 		}
 
 		// Effet du vomi sur le client
@@ -269,9 +274,9 @@ func updateSimulation() {
 		}
 
 		// ---------------------------------------------------------------------
-		// ANTI-PATTERN 4 : Balayage Brut de Voisins (Bousculade en O(N * K))
-		// Chaque client parcourt un échantillon d'autres clients pour évaluer la densité de foule
-		// Boucle imbriquée pénalisante qui détruit les caches de données CPU (L1/L2).
+		// Balayage d'un échantillon de voisins (Bousculade en O(N * K))
+		// O3 : seules les positions (160 Ko, résidentes en L2) sont lues, et le rejet
+		// AABB écarte les voisins lointains avant tout calcul de racine carrée.
 		// ---------------------------------------------------------------------
 		pushX, pushY := 0.0, 0.0
 		scanStep := len(clients) / MaxNeighborsCheckNaive
@@ -282,13 +287,25 @@ func updateSimulation() {
 		// Allocation inutile d'une tranche de voisinage (Heap Escape)
 		neighborsCrowd := make([]float64, 0, 8)
 
-		for nIdx := (i * 7) % scanStep; nIdx < len(clients); nIdx += scanStep {
+		px, py := pos.X, pos.Y
+		for nIdx := (i * 7) % scanStep; nIdx < len(positions); nIdx += scanStep {
 			if nIdx == i {
 				continue
 			}
-			other := clients[nIdx]
-			ndx := c.X - other.X
-			ndy := c.Y - other.Y
+			other := &positions[nIdx]
+			// Rejet AABB exact : |dx| >= 22 implique dx*dx >= 484 (arrondi monotone),
+			// donc nDist >= 22 et le voisin aurait été écarté par le test ci-dessous.
+			// math.Abs (masque de bit, sans branchement) est indispensable : la forme
+			// « ndx >= 22 || ndx <= -22 » branche sur le signe de dx (~50 % de
+			// mauvaises prédictions) et rend le tick 60 % plus lent (cf. bench/03_*).
+			ndx := px - other.X
+			if math.Abs(ndx) >= 22.0 {
+				continue
+			}
+			ndy := py - other.Y
+			if math.Abs(ndy) >= 22.0 {
+				continue
+			}
 			nDist := math.Sqrt(ndx*ndx + ndy*ndy)
 
 			if nDist > 0.001 && nDist < 22.0 {
@@ -346,8 +363,8 @@ func updateSimulation() {
 			vx := math.Cos(c.WanderAngle) * moveSpeed
 			vy := math.Sin(c.WanderAngle) * moveSpeed
 
-			c.X += vx + pushX
-			c.Y += vy + pushY
+			pos.X += vx + pushX
+			pos.Y += vy + pushY
 
 			// Risque de vomir : se déclenche uniquement en cas de dépassement de tolérance
 			if c.Alcohol > c.Tolerance {
@@ -363,8 +380,8 @@ func updateSimulation() {
 					puddleIdSeq++
 					vomitPuddles = append(vomitPuddles, VomitPuddle{
 						ID:         puddleIdSeq,
-						X:          c.X,
-						Y:          c.Y,
+						X:          pos.X,
+						Y:          pos.Y,
 						Radius:     VomitRadius,
 						ExpireTick: currentTick + int64(PuddleLifetimeTicks), // Reste au sol après le vomi
 					})
@@ -394,8 +411,8 @@ func updateSimulation() {
 				}
 				vx := math.Cos(c.WanderAngle) * moveSpeed
 				vy := math.Sin(c.WanderAngle) * moveSpeed
-				c.X += vx + pushX
-				c.Y += vy + pushY
+				pos.X += vx + pushX
+				pos.Y += vy + pushY
 			} else {
 				// Le client a soif et se dirige activement vers un comptoir de bar !
 
@@ -408,8 +425,8 @@ func updateSimulation() {
 				for bIdx := 0; bIdx < len(bars); bIdx++ {
 					bx := bars[bIdx].X + bars[bIdx].W*0.5
 					by := bars[bIdx].Y + bars[bIdx].H*0.5
-					dx := bx - c.X
-					dy := by - c.Y
+					dx := bx - pos.X
+					dy := by - pos.Y
 					d := math.Sqrt(dx*dx + dy*dy)
 
 					barDistances[bIdx] = BarDistance{
@@ -427,8 +444,8 @@ func updateSimulation() {
 				targetCenterX := targetBar.X + targetBar.W*0.5
 				targetCenterY := targetBar.Y + targetBar.H*0.5
 
-				dirX := targetCenterX - c.X
-				dirY := targetCenterY - c.Y
+				dirX := targetCenterX - pos.X
+				dirY := targetCenterY - pos.Y
 				distToBar := math.Sqrt(dirX*dirX + dirY*dirY)
 
 				if distToBar <= ServingRadius {
@@ -440,7 +457,7 @@ func updateSimulation() {
 					totalBeersCount++
 
 					// Le client s'oriente vers la salle pour s'éloigner du comptoir en buvant
-					c.WanderAngle = math.Atan2(c.Y-targetCenterY, c.X-targetCenterX) + (simRng.Float64()-0.5)*0.8
+					c.WanderAngle = math.Atan2(pos.Y-targetCenterY, pos.X-targetCenterX) + (simRng.Float64()-0.5)*0.8
 				} else {
 					effSpeed := c.Speed
 					if isTrappedInVomit {
@@ -452,22 +469,22 @@ func updateSimulation() {
 					vx := (dirX / distToBar) * effSpeed
 					vy := (dirY / distToBar) * effSpeed
 
-					c.X += vx + pushX
-					c.Y += vy + pushY
+					pos.X += vx + pushX
+					pos.Y += vy + pushY
 				}
 			}
 		}
 
 		// Maintien dans les limites du bar (murs infranchissables)
-		if c.X < 50.0 {
-			c.X = 50.0
-		} else if c.X > WorldSize-50.0 {
-			c.X = WorldSize - 50.0
+		if pos.X < 50.0 {
+			pos.X = 50.0
+		} else if pos.X > WorldSize-50.0 {
+			pos.X = WorldSize - 50.0
 		}
-		if c.Y < 50.0 {
-			c.Y = 50.0
-		} else if c.Y > WorldSize-50.0 {
-			c.Y = WorldSize - 50.0
+		if pos.Y < 50.0 {
+			pos.Y = 50.0
+		} else if pos.Y > WorldSize-50.0 {
+			pos.Y = WorldSize - 50.0
 		}
 	}
 
@@ -485,7 +502,8 @@ func getSimulationStats(currentTPS int) SimStats {
 	soberCount, drinkingCount, vomitingCount := 0, 0, 0
 	totalAlcohol := 0.0
 
-	for _, c := range clients {
+	for i := range clients {
+		c := &clients[i]
 		switch c.State {
 		case StateSober:
 			soberCount++
@@ -524,11 +542,12 @@ func getSimulationStats(currentTPS int) SimStats {
 func buildFrame(liveTPS int) ([]byte, error) {
 	stats := getSimulationStats(liveTPS)
 	clientPoints := make([]ClientPoint, len(clients))
-	for idx, c := range clients {
+	for idx := range clients {
+		c := &clients[idx]
 		scaledAlc := uint8(math.Min(255, c.Alcohol*50.0))
 		clientPoints[idx] = ClientPoint{
-			X:       int16(c.X),
-			Y:       int16(c.Y),
+			X:       int16(positions[idx].X),
+			Y:       int16(positions[idx].Y),
 			State:   int8(c.State),
 			Alcohol: scaledAlc,
 		}
