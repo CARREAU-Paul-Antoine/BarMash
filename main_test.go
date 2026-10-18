@@ -26,18 +26,6 @@ func TestClientStructSize(t *testing.T) {
 // Micro-Benchmarks d'Audit de Performance
 // -----------------------------------------------------------------------------
 
-// BenchmarkUpdateSimulationNaive mesure les performances de la boucle de calcul complète
-// avec 10 000 agents, incluant les allocations par frame et les calculs de distances.
-func BenchmarkUpdateSimulationNaive(b *testing.B) {
-	initSimulation(MasterSeed)
-	b.ResetTimer()
-	b.ReportAllocs()
-
-	for i := 0; i < b.N; i++ {
-		updateSimulation()
-	}
-}
-
 // Benchmark1_ContiguousSlice simule la mise à jour d'un tableau contigu en mémoire ([]Client)
 // où le Hardware Prefetcher précharge les données de manière optimale.
 func Benchmark1_ContiguousSlice(b *testing.B) {

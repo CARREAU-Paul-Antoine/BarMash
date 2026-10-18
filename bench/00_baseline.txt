@@ -1,0 +1,66 @@
+goos: windows
+goarch: amd64
+pkg: barmash
+cpu: AMD Ryzen 7 9700X 8-Core Processor             
+Benchmark1_ContiguousSlice-16       	  178916	      6423 ns/op	       0 B/op	       0 allocs/op
+Benchmark1_ContiguousSlice-16       	  185262	      6398 ns/op	       0 B/op	       0 allocs/op
+Benchmark1_ContiguousSlice-16       	  187075	      6432 ns/op	       0 B/op	       0 allocs/op
+Benchmark1_ContiguousSlice-16       	  188845	      6371 ns/op	       0 B/op	       0 allocs/op
+Benchmark1_ContiguousSlice-16       	  186457	      6463 ns/op	       0 B/op	       0 allocs/op
+Benchmark1_ContiguousSlice-16       	  188515	      6420 ns/op	       0 B/op	       0 allocs/op
+Benchmark1_ContiguousSlice-16       	  185156	      6392 ns/op	       0 B/op	       0 allocs/op
+Benchmark1_ContiguousSlice-16       	  184454	      6407 ns/op	       0 B/op	       0 allocs/op
+Benchmark1_ContiguousSlice-16       	  188433	      6411 ns/op	       0 B/op	       0 allocs/op
+Benchmark1_ContiguousSlice-16       	  187546	      6378 ns/op	       0 B/op	       0 allocs/op
+Benchmark2_PointersSequential-16    	  154286	      7736 ns/op	       0 B/op	       0 allocs/op
+Benchmark2_PointersSequential-16    	  152085	      7831 ns/op	       0 B/op	       0 allocs/op
+Benchmark2_PointersSequential-16    	  154801	      7753 ns/op	       0 B/op	       0 allocs/op
+Benchmark2_PointersSequential-16    	  155544	      7740 ns/op	       0 B/op	       0 allocs/op
+Benchmark2_PointersSequential-16    	  153765	      7935 ns/op	       0 B/op	       0 allocs/op
+Benchmark2_PointersSequential-16    	  153918	      7804 ns/op	       0 B/op	       0 allocs/op
+Benchmark2_PointersSequential-16    	  154689	      7782 ns/op	       0 B/op	       0 allocs/op
+Benchmark2_PointersSequential-16    	  153877	      7854 ns/op	       0 B/op	       0 allocs/op
+Benchmark2_PointersSequential-16    	  154236	      7758 ns/op	       0 B/op	       0 allocs/op
+Benchmark2_PointersSequential-16    	  154670	      7709 ns/op	       0 B/op	       0 allocs/op
+Benchmark3_PointersScattered-16     	   96274	     12523 ns/op	       0 B/op	       0 allocs/op
+Benchmark3_PointersScattered-16     	   96259	     12752 ns/op	       0 B/op	       0 allocs/op
+Benchmark3_PointersScattered-16     	   95979	     12290 ns/op	       0 B/op	       0 allocs/op
+Benchmark3_PointersScattered-16     	   96170	     12505 ns/op	       0 B/op	       0 allocs/op
+Benchmark3_PointersScattered-16     	   98146	     12927 ns/op	       0 B/op	       0 allocs/op
+Benchmark3_PointersScattered-16     	   94672	     12613 ns/op	       0 B/op	       0 allocs/op
+Benchmark3_PointersScattered-16     	   94984	     12555 ns/op	       0 B/op	       0 allocs/op
+Benchmark3_PointersScattered-16     	   93134	     12736 ns/op	       0 B/op	       0 allocs/op
+Benchmark3_PointersScattered-16     	   94933	     12437 ns/op	       0 B/op	       0 allocs/op
+Benchmark3_PointersScattered-16     	   96918	     12287 ns/op	       0 B/op	       0 allocs/op
+BenchmarkUpdateSimulation/phase=early-16         	     820	   1456160 ns/op	  433974 B/op	    3390 allocs/op
+BenchmarkUpdateSimulation/phase=early-16         	     825	   1455354 ns/op	  432760 B/op	    3380 allocs/op
+BenchmarkUpdateSimulation/phase=early-16         	     826	   1457901 ns/op	  432556 B/op	    3379 allocs/op
+BenchmarkUpdateSimulation/phase=early-16         	     819	   1457881 ns/op	  434253 B/op	    3392 allocs/op
+BenchmarkUpdateSimulation/phase=early-16         	     802	   1463710 ns/op	  441078 B/op	    3445 allocs/op
+BenchmarkUpdateSimulation/phase=early-16         	     810	   1453651 ns/op	  437374 B/op	    3416 allocs/op
+BenchmarkUpdateSimulation/phase=early-16         	     829	   1477081 ns/op	  432013 B/op	    3375 allocs/op
+BenchmarkUpdateSimulation/phase=early-16         	     800	   1491487 ns/op	  442134 B/op	    3454 allocs/op
+BenchmarkUpdateSimulation/phase=early-16         	     825	   1464284 ns/op	  432760 B/op	    3380 allocs/op
+BenchmarkUpdateSimulation/phase=early-16         	     822	   1464833 ns/op	  433451 B/op	    3386 allocs/op
+BenchmarkUpdateSimulation/phase=rush-16          	     217	   5547185 ns/op	  428631 B/op	    3305 allocs/op
+BenchmarkUpdateSimulation/phase=rush-16          	     218	   5534228 ns/op	  428604 B/op	    3305 allocs/op
+BenchmarkUpdateSimulation/phase=rush-16          	     216	   5549471 ns/op	  428657 B/op	    3305 allocs/op
+BenchmarkUpdateSimulation/phase=rush-16          	     213	   5523703 ns/op	  428705 B/op	    3305 allocs/op
+BenchmarkUpdateSimulation/phase=rush-16          	     217	   5521564 ns/op	  428631 B/op	    3305 allocs/op
+BenchmarkUpdateSimulation/phase=rush-16          	     217	   5533629 ns/op	  428633 B/op	    3305 allocs/op
+BenchmarkUpdateSimulation/phase=rush-16          	     214	   5562179 ns/op	  428707 B/op	    3305 allocs/op
+BenchmarkUpdateSimulation/phase=rush-16          	     214	   5542233 ns/op	  428708 B/op	    3305 allocs/op
+BenchmarkUpdateSimulation/phase=rush-16          	     216	   5532933 ns/op	  428657 B/op	    3305 allocs/op
+BenchmarkUpdateSimulation/phase=rush-16          	     216	   5544919 ns/op	  428657 B/op	    3305 allocs/op
+BenchmarkBuildFrame-16                           	    1137	   1099983 ns/op	    368674 bytes/frame	  585952 B/op	       6 allocs/op
+BenchmarkBuildFrame-16                           	    1116	   1063691 ns/op	    368675 bytes/frame	  585085 B/op	       6 allocs/op
+BenchmarkBuildFrame-16                           	    1131	   1072094 ns/op	    368674 bytes/frame	  586706 B/op	       6 allocs/op
+BenchmarkBuildFrame-16                           	    1012	   1069412 ns/op	    368675 bytes/frame	  564434 B/op	       6 allocs/op
+BenchmarkBuildFrame-16                           	    1120	   1096151 ns/op	    368676 bytes/frame	  591658 B/op	       6 allocs/op
+BenchmarkBuildFrame-16                           	    1135	   1111579 ns/op	    368675 bytes/frame	  570481 B/op	       6 allocs/op
+BenchmarkBuildFrame-16                           	    1039	   1084956 ns/op	    368676 bytes/frame	  586087 B/op	       6 allocs/op
+BenchmarkBuildFrame-16                           	    1124	   1075981 ns/op	    368676 bytes/frame	  596420 B/op	       6 allocs/op
+BenchmarkBuildFrame-16                           	    1123	   1094438 ns/op	    368676 bytes/frame	  584198 B/op	       6 allocs/op
+BenchmarkBuildFrame-16                           	    1130	   1119771 ns/op	    368676 bytes/frame	  579817 B/op	       6 allocs/op
+PASS
+ok  	barmash	97.028s

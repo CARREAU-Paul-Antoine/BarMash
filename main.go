@@ -7,6 +7,7 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
+	"net/http/pprof"
 	"runtime"
 	"time"
 
@@ -33,9 +34,9 @@ const (
 	// Paramètres Bar & Boisson équilibrés
 	BarCounterCount        int     = 8
 	ServingRadius          float64 = 50.0
-	DrinkDurationTicks     int     = 150   // ~5 secondes pour savourer sa bière
-	VomitDurationTicks     int     = 60    // ~2 secondes immobilisé pour vomir
-	VomitRadius            float64 = 24.0  // Taille de flaque raisonnable
+	DrinkDurationTicks     int     = 150  // ~5 secondes pour savourer sa bière
+	VomitDurationTicks     int     = 60   // ~2 secondes immobilisé pour vomir
+	VomitRadius            float64 = 24.0 // Taille de flaque raisonnable
 	VomitPerturbRadius     float64 = 50.0
 	MaxStamina             float64 = 100.0
 	DefaultClientSpeed     float64 = 3.4
@@ -156,9 +157,9 @@ type FramePayload struct {
 
 var (
 	simRng          *rand.Rand
-	clients         []*Client       // Tranche de pointeurs dispersés (Heap Churn)
+	clients         []*Client // Tranche de pointeurs dispersés (Heap Churn)
 	bars            []BarCounter
-	vomitPuddles    []*VomitPuddle  // Flaques actives en mémoire
+	vomitPuddles    []*VomitPuddle // Flaques actives en mémoire
 	puddleIdSeq     int64
 	totalBeersCount int
 	currentTick     int64
@@ -524,6 +525,31 @@ func getSimulationStats(currentTPS int) SimStats {
 	}
 }
 
+// buildFrame prépare et encode la charge utile envoyée au Canvas Web pour un tick.
+func buildFrame(liveTPS int) ([]byte, error) {
+	stats := getSimulationStats(liveTPS)
+	clientPoints := make([]ClientPoint, len(clients))
+	for idx, c := range clients {
+		scaledAlc := uint8(math.Min(255, c.Alcohol*50.0))
+		clientPoints[idx] = ClientPoint{
+			X:       int16(c.X),
+			Y:       int16(c.Y),
+			State:   int8(c.State),
+			Alcohol: scaledAlc,
+		}
+	}
+
+	payload := FramePayload{
+		Stats:        stats,
+		WorldSize:    WorldSize,
+		Bars:         bars,
+		VomitPuddles: vomitPuddles,
+		Clients:      clientPoints,
+	}
+
+	return json.Marshal(payload)
+}
+
 // -----------------------------------------------------------------------------
 // Serveur WebSocket & Télémétrie en Temps Réel
 // -----------------------------------------------------------------------------
@@ -557,28 +583,7 @@ func wsHandler(ws *websocket.Conn) {
 				stats.SoberCount, stats.DrinkingCount, stats.VomitingCount, stats.ActivePuddles, stats.BeersServed)
 		}
 
-		// Préparation de la charge utile compacte pour le Canvas Web
-		stats := getSimulationStats(liveTPS)
-		clientPoints := make([]ClientPoint, len(clients))
-		for idx, c := range clients {
-			scaledAlc := uint8(math.Min(255, c.Alcohol*50.0))
-			clientPoints[idx] = ClientPoint{
-				X:       int16(c.X),
-				Y:       int16(c.Y),
-				State:   int8(c.State),
-				Alcohol: scaledAlc,
-			}
-		}
-
-		payload := FramePayload{
-			Stats:        stats,
-			WorldSize:    WorldSize,
-			Bars:         bars,
-			VomitPuddles: vomitPuddles,
-			Clients:      clientPoints,
-		}
-
-		data, err := json.Marshal(payload)
+		data, err := buildFrame(liveTPS)
 		if err != nil {
 			log.Printf("[WebSocket] Erreur d'encodage JSON: %v", err)
 			break
@@ -591,6 +596,23 @@ func wsHandler(ws *websocket.Conn) {
 	}
 }
 
+// AdminAddr expose pprof sur la boucle locale uniquement, isolé du port public.
+const AdminAddr = "localhost:6060"
+
+// startAdmin démarre le serveur d'administration pprof sur un mux dédié :
+// l'application publique n'utilise pas http.DefaultServeMux, où net/http/pprof s'enregistre.
+func startAdmin() {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/debug/pprof/", pprof.Index)
+	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	go func() {
+		log.Printf("[Admin] pprof indisponible : %v", http.ListenAndServe(AdminAddr, mux))
+	}()
+}
+
 // -----------------------------------------------------------------------------
 // Point d'Entrée Principal (Serveur HTTP + Boucle Autonome)
 // -----------------------------------------------------------------------------
@@ -598,8 +620,11 @@ func wsHandler(ws *websocket.Conn) {
 func main() {
 	initSimulation(MasterSeed)
 
-	http.Handle("/", http.FileServer(http.Dir(".")))
-	http.Handle("/ws", websocket.Handler(wsHandler))
+	startAdmin()
+
+	appMux := http.NewServeMux()
+	appMux.Handle("/", http.FileServer(http.Dir(".")))
+	appMux.Handle("/ws", websocket.Handler(wsHandler))
 
 	port := 8080
 	fmt.Println("================================================================================")
@@ -607,10 +632,11 @@ func main() {
 	fmt.Println("   Simulation Haute Charge : 10 000 Clients Autonomes en Bar")
 	fmt.Println("================================================================================")
 	fmt.Printf("   Interface Web & Télémétrie : http://localhost:%d\n", port)
+	fmt.Printf("   Profiling pprof (local)    : http://%s/debug/pprof/\n", AdminAddr)
 	fmt.Println("   Graine fixe (MasterSeed)   : 42")
 	fmt.Println("   Fréquence cible (TargetTPS): 30 TPS")
 	fmt.Println("================================================================================")
 	fmt.Println("Appuyez sur Ctrl+C pour arrêter le serveur.")
 
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), appMux))
 }

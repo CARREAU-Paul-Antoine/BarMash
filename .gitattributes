@@ -1,0 +1,2 @@
+Makefile text eol=lf
+*.pprof binary
