@@ -1,0 +1,20 @@
+goos: windows
+goarch: amd64
+pkg: barmash
+cpu: AMD Ryzen 7 9700X 8-Core Processor
+BenchmarkUpdateSimulation/phase=early-16         	    3193	    390414 ns/op	       0 B/op	       0 allocs/op
+BenchmarkUpdateSimulation/phase=rush-16          	    2230	    564170 ns/op	       0 B/op	       0 allocs/op
+BenchmarkUpdateSimulation/phase=early-16         	    3046	    400070 ns/op	       0 B/op	       0 allocs/op
+BenchmarkUpdateSimulation/phase=rush-16          	    1795	    609198 ns/op	       0 B/op	       0 allocs/op
+BenchmarkUpdateSimulation/phase=early-16         	    3036	    398255 ns/op	       0 B/op	       0 allocs/op
+BenchmarkUpdateSimulation/phase=rush-16          	    2151	    580858 ns/op	       0 B/op	       0 allocs/op
+BenchmarkUpdateSimulation/phase=early-16         	    3145	    393342 ns/op	       0 B/op	       0 allocs/op
+BenchmarkUpdateSimulation/phase=rush-16          	    2085	    572083 ns/op	       0 B/op	       0 allocs/op
+BenchmarkUpdateSimulation/phase=early-16         	    3094	    393010 ns/op	       0 B/op	       0 allocs/op
+BenchmarkUpdateSimulation/phase=rush-16          	    2169	    577157 ns/op	       0 B/op	       0 allocs/op
+BenchmarkUpdateSimulation/phase=early-16         	    3091	    395028 ns/op	       0 B/op	       0 allocs/op
+BenchmarkUpdateSimulation/phase=rush-16          	    2146	    577132 ns/op	       0 B/op	       0 allocs/op
+BenchmarkUpdateSimulation/phase=early-16         	    3120	    396154 ns/op	       0 B/op	       0 allocs/op
+BenchmarkUpdateSimulation/phase=rush-16          	    1892	    576906 ns/op	       0 B/op	       0 allocs/op
+BenchmarkUpdateSimulation/phase=early-16         	    2985	    396143 ns/op	       0 B/op	       0 allocs/op
+BenchmarkUpdateSimulation/phase=rush-16          	    2114	    579947 ns/op	       2 B/op	       0 allocs/op

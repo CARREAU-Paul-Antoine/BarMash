@@ -184,6 +184,8 @@ func initSimulation(seed int64) {
 	// Deux tranches contiguës allouées une seule fois (ordre des tirages RNG inchangé)
 	clients = make([]Client, TotalClients)
 	positions = make([]Vec2, TotalClients)
+	forces = make([]Vec2, TotalClients)
+	vomitFlags = make([]uint8, TotalClients)
 	for i := 0; i < TotalClients; i++ {
 		c := &clients[i]
 		// Répartition initiale pseudo-aléatoire dans le bar
@@ -226,8 +228,13 @@ func updateSimulation() {
 	}
 	buildPuddleIndex()
 
-	// O3 : Parcours séquentiel de deux tranches contiguës : données froides (clients)
-	// et données chaudes (positions), lues dans l'ordre par le prefetcher matériel.
+	// O9 - Phase 1 (parallèle) : poussées et contacts avec les flaques de début de tick.
+	if pool == nil {
+		setWorkerCount(defaultWorkers())
+	}
+	pool.run()
+
+	// O9 - Phase 2 (séquentielle) : machine à états dans l'ordre des clients, RNG inclus.
 	for i := 0; i < len(clients); i++ {
 		c := &clients[i]
 		pos := &positions[i]
@@ -238,11 +245,14 @@ func updateSimulation() {
 		}
 
 		// ---------------------------------------------------------------------
-		// ÉTAPE A : Évaluation des Flaques de Vomi (O2 : index CSR, voisinage 3 x 3)
+		// ÉTAPE A : Flaques de vomi. Phase 1 a testé les flaques indexées (O2) ;
+		// on ajoute ici celles créées plus tôt dans ce tick par les clients précédents.
 		// ---------------------------------------------------------------------
-		isTrappedInVomit, isSmellingVomit := false, false
-		if len(vomitPuddles) > 0 { // Fast-path : aucun appel en début de soirée
-			isTrappedInVomit, isSmellingVomit = probePuddles(pos.X, pos.Y)
+		isTrappedInVomit := vomitFlags[i]&flagTrapped != 0
+		isSmellingVomit := vomitFlags[i]&flagSmelling != 0
+		if !isTrappedInVomit && len(vomitPuddles) > puddleIndexed {
+			t, s := probeTailPuddles(pos.X, pos.Y)
+			isTrappedInVomit, isSmellingVomit = t, isSmellingVomit || s
 		}
 
 		// Effet du vomi sur le client
@@ -253,51 +263,7 @@ func updateSimulation() {
 			c.WanderAngle += (simRng.Float64() - 0.5) * 0.4
 		}
 
-		// ---------------------------------------------------------------------
-		// Balayage d'un échantillon de voisins (Bousculade en O(N * K))
-		// O3 : seules les positions (160 Ko, résidentes en L2) sont lues, et le rejet
-		// AABB écarte les voisins lointains avant tout calcul de racine carrée.
-		// ---------------------------------------------------------------------
-		pushX, pushY := 0.0, 0.0
-		scanStep := len(clients) / MaxNeighborsCheckNaive
-		if scanStep < 1 {
-			scanStep = 1
-		}
-
-		px, py := pos.X, pos.Y
-		for nIdx := (i * 7) % scanStep; nIdx < len(positions); nIdx += scanStep {
-			if nIdx == i {
-				continue
-			}
-			other := &positions[nIdx]
-			// Rejet AABB exact : |dx| >= 22 implique dx*dx >= 484 (arrondi monotone),
-			// donc nDist >= 22 et le voisin aurait été écarté par le test ci-dessous.
-			// math.Abs (masque de bit, sans branchement) est indispensable : la forme
-			// « ndx >= 22 || ndx <= -22 » branche sur le signe de dx (~50 % de
-			// mauvaises prédictions) et rend le tick 60 % plus lent (cf. perf/bench/03_*).
-			ndx := px - other.X
-			if math.Abs(ndx) >= 22.0 {
-				continue
-			}
-			ndy := py - other.Y
-			if math.Abs(ndy) >= 22.0 {
-				continue
-			}
-			nDist := math.Sqrt(ndx*ndx + ndy*ndy)
-
-			if nDist > 0.001 && nDist < 22.0 {
-				repelFactor := (22.0 - nDist) / 22.0
-				pushX += (ndx / nDist) * repelFactor * 1.0
-				pushY += (ndy / nDist) * repelFactor * 1.0
-			}
-		}
-
-		// Amortissement de la poussée pour éviter les saccades excessives
-		pushDist := math.Sqrt(pushX*pushX + pushY*pushY)
-		if pushDist > c.Speed*1.0 {
-			pushX = (pushX / pushDist) * c.Speed * 1.0
-			pushY = (pushY / pushDist) * c.Speed * 1.0
-		}
+		pushX, pushY := forces[i].X, forces[i].Y
 
 		// ---------------------------------------------------------------------
 		// ÉTAPE B : Machine à États Finis (FSM) du Client

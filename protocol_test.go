@@ -21,8 +21,11 @@ import (
 const (
 	// GoldenTicks couvre l'apparition des flaques (> 2 500 ticks) pour valider toutes les branches.
 	GoldenTicks = 4000
-	// GoldenChecksum est l'empreinte FNV-1a de l'état produit par la version naïve (commit de référence).
-	GoldenChecksum uint64 = 0xaa36b4f0b73c614c
+	// GoldenChecksum est l'empreinte FNV-1a de l'état après GoldenTicks ticks.
+	// De la version naïve à O8, l'empreinte était 0xaa36b4f0b73c614c (bit à bit identique au naïf).
+	// O9 calcule la bousculade sur les positions de début de tick (modèle en deux phases) :
+	// nouvelle référence, identique quel que soit le nombre de workers.
+	GoldenChecksum uint64 = 0xfcd13227a3a0c638
 
 	// RushWarmupTicks place la simulation en régime de croisière (~450 flaques actives).
 	RushWarmupTicks = 5000
@@ -193,6 +196,27 @@ func TestSincosBitExact(t *testing.T) {
 		s, c := math.Sincos(a)
 		if math.Float64bits(s) != math.Float64bits(math.Sin(a)) || math.Float64bits(c) != math.Float64bits(math.Cos(a)) {
 			t.Fatalf("Sincos(%v) diffère de (Sin, Cos)", a)
+		}
+	}
+}
+
+// TestWorkerCountInvariance valide O9 : la phase parallèle ne dépend que de l'état de début
+// de tick, donc l'état final est identique bit à bit quel que soit le nombre de workers.
+func TestWorkerCountInvariance(t *testing.T) {
+	defer setWorkerCount(defaultWorkers())
+	var ref uint64
+	for _, w := range []int{1, 3, 8, 16} {
+		setWorkerCount(w)
+		initSimulation(MasterSeed)
+		for i := 0; i < 3000; i++ {
+			updateSimulation()
+		}
+		got := stateChecksum()
+		t.Logf("%2d workers : %#016x (%d flaques)", w, got, len(vomitPuddles))
+		if w == 1 {
+			ref = got
+		} else if got != ref {
+			t.Fatalf("%d workers : checksum %#016x différent de la version 1 worker %#016x", w, got, ref)
 		}
 	}
 }

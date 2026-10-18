@@ -87,6 +87,16 @@ func probePuddle(x, y float64, vp *VomitPuddle) (trapped, smelling bool) {
 // probePuddles renvoie si le client est piégé dans une flaque ou en sent une à proximité.
 // Le résultat est un OU logique sur les flaques, donc indépendant de l'ordre de parcours.
 func probePuddles(x, y float64) (trapped, smelling bool) {
+	trapped, smelling = probeIndexedPuddles(x, y)
+	if trapped {
+		return true, smelling
+	}
+	t, s := probeTailPuddles(x, y)
+	return t, smelling || s
+}
+
+// probeIndexedPuddles teste les flaques présentes en début de tick (lecture seule : phase 1).
+func probeIndexedPuddles(x, y float64) (trapped, smelling bool) {
 	cx, cy := puddleCell(x), puddleCell(y)
 	x0, x1 := max(cx-1, 0), min(cx+1, PuddleGridDim-1)
 	for gy := max(cy-1, 0); gy <= min(cy+1, PuddleGridDim-1); gy++ {
@@ -99,6 +109,11 @@ func probePuddles(x, y float64) (trapped, smelling bool) {
 			smelling = smelling || s
 		}
 	}
+	return false, smelling
+}
+
+// probeTailPuddles teste les flaques créées pendant le tick courant (phase 2, séquentielle).
+func probeTailPuddles(x, y float64) (trapped, smelling bool) {
 	for i := puddleIndexed; i < len(vomitPuddles); i++ {
 		t, s := probePuddle(x, y, &vomitPuddles[i])
 		if t {
