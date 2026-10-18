@@ -43,7 +43,7 @@ const (
 )
 
 // -----------------------------------------------------------------------------
-// Énumérations & Structures (Volontairement Naïves & Basées Pointeur)
+// Énumérations & Structures (disposition chaud/froid, tableaux de valeurs)
 // -----------------------------------------------------------------------------
 
 // ClientState représente l'état d'ébriété et d'action du client
@@ -143,7 +143,7 @@ type SimStats struct {
 // {"stats":SimStats,"world_size":2000,"bars":[...],"puddles":[...],"clients":[{"x","y","s","a"}...]}
 
 // -----------------------------------------------------------------------------
-// État Global de la Simulation (Moteur Naïf)
+// État Global de la Simulation
 // -----------------------------------------------------------------------------
 
 var (
@@ -209,13 +209,13 @@ func initSimulation(seed int64) {
 }
 
 // -----------------------------------------------------------------------------
-// Boucle de Mise à Jour par Tick (Volontairement Naïve & Pénalisante)
+// Boucle de Mise à Jour par Tick (0 B/op, 0 allocs/op)
 // -----------------------------------------------------------------------------
 
-// updateSimulation exécute un cycle de calcul complet avec :
-// 1. Allocations dynamiques de tranches intermédiaires à la volée (Heap pressure)
-// 2. Calculs de distance bruts en boucle imbriquée (CPU stalls, Cache Misses)
-// 3. Détection des flaques de vomi et perturbation des voisins
+// updateSimulation exécute un cycle de calcul complet, sans allocation :
+// 1. Expiration FIFO des flaques et reconstruction de leur index CSR (O1, O2)
+// 2. Bousculade sur les positions contiguës avec rejet AABB sans branche (O3)
+// 3. Machine à états des clients, bar le plus proche via la table de Voronoï (O4, O5, O7)
 func updateSimulation() {
 	start := time.Now()
 	currentTick++
@@ -580,7 +580,7 @@ func main() {
 
 	port := 8080
 	fmt.Println("================================================================================")
-	fmt.Println("   🍺 BARMASH : LA TOURNÉE INFERNALE • Moteur Naïf & Non-Optimisé")
+	fmt.Println("   🍺 BARMASH : LA TOURNÉE INFERNALE • Moteur Optimisé (0 alloc/tick)")
 	fmt.Println("   Simulation Haute Charge : 10 000 Clients Autonomes en Bar")
 	fmt.Println("================================================================================")
 	fmt.Printf("   Interface Web & Télémétrie : http://localhost:%d\n", port)

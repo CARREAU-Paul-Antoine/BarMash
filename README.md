@@ -3,7 +3,9 @@
 Moteur de simulation spatiale en temps réel modélisant une soirée festive à haute charge dans un bar avec **10 000 clients autonomes**, plusieurs comptoirs de distribution et des mares de vomi dynamiques.
 
 > **Objectif Pédagogique (Sup de Vinci - RNCP Bloc 4 Backend) :**  
-> Ce projet constitue la **version initiale et naïve (non-optimisée)**. Elle a été délibérément conçue avec des anti-patterns de conception mémoire (allocations dynamiques systématiques sur le Tas, pointeurs dispersés, scans $\mathcal{O}(N^2)$) pour mettre en évidence l'**effondrement des performances**, les **CPU Stalls**, les **défauts de cache (Cache Misses)** et la **pression sur le Garbage Collector (GC)**.
+> Le projet part d'une **version naïve** (commit `343a4ee`), délibérément conçue avec des anti-patterns de conception mémoire (allocations dynamiques systématiques sur le Tas, pointeurs dispersés, scans $\mathcal{O}(N^2)$). Il l'optimise ensuite étape par étape : chaque gain est prouvé par `benchstat`, et chaque étape est validée par un checksum bit à bit de l'état de la simulation (aucune régression logique).
+>
+> **Résultat :** tick de croisière **5,54 ms → 1,36 ms (×4,1)**, frame réseau **1,09 ms → 0,13 ms (×8,4)**, **0 allocation** par tick et par frame, 528 → 4 cycles de GC en 25 s de service réel. Détail dans [PLAN_OPTIMISATION.md](PLAN_OPTIMISATION.md).
 
 ---
 
@@ -24,32 +26,34 @@ Moteur de simulation spatiale en temps réel modélisant une soirée festive à 
 
 ---
 
-## 2. Anti-Patterns Volontaires (Version Naïve pour l'Audit)
+## 2. Anti-Patterns de la Version Naïve et Optimisations Appliquées
 
-1. **Pointeurs Dispersés sur le Tas (`[]*Client`) :**
-   - Chaque client est instancié individuellement via `new(Client)` sur la Heap.
-   - Les structures mesurent **96 octets** (dépassant la ligne de cache L1/L2 de 64 octets), forçant de multiples *Cache Line Splits*.
-   - Le *Hardware Prefetcher* du processeur ne peut pas anticiper les sauts d'adresses en RAM, provoquant des *CPU Stalls* continus.
-2. **Allocations Dynamiques par Frame (`make()` dans la boucle de rendu) :**
-   - Création de tranches éphémères à chaque tick pour filtrer les flaques de vomi (`make([]*VomitPuddle, ...)`).
-   - Allocation à chaque tick d'une tranche de distances par client (`make([]BarDistance, len(bars))`).
-   - Allocation de tranches pour le calcul de voisinage (`neighborsCrowd := make([]float64, 0, 8)`).
-   - Résultat mesuré : **~247 Ko alloués par tick** (~760 allocations/op), déclenchant des cycles répétés du Garbage Collector.
-3. **Calcul Brut de Distances $\mathcal{O}(N \times K)$ / $\mathcal{O}(N^2)$ :**
-   - Chaque client calcule naïvement la distance Euclidienne avec `math.Sqrt()` vers tous les bars et effectue un scan naïf de bousculade sur les autres agents.
+| Anti-pattern naïf | Optimisation | Étape |
+| :--- | :--- | :--- |
+| Scan des ~450 flaques par client, en $\mathcal{O}(N \times P)$ (60 % du CPU) | Index spatial CSR reconstruit par tri par comptage, voisinage 3×3 | O2 |
+| `[]*Client` de 96 o lus 60 fois par tick dans le scan de bousculade | Séparation chaud/froid : `positions []Vec2` (160 Ko, résident en L2) + rejet AABB sans branche | O3 |
+| `make([]BarDistance)`, `neighborsCrowd`, `[]*VomitPuddle` à chaque tick | Suppression à la source, flaques par valeur avec expiration FIFO | O1, O4 |
+| `math.Cos` + `math.Sin` | `math.Sincos` (bit-exact) | O5 |
+| `json.Marshal` + `string(data)` + `runtime.ReadMemStats` (STW) par frame | Encodeur append-only octet-identique, buffer réutilisé, `runtime/metrics` | O6, O6b |
+| 8 `math.Sqrt` pour trouver le bar le plus proche | Table de Voronoï certifiée (6,4 Ko) | O7 |
 
 ---
 
 ## 3. Structure du Projet
 
 ```text
-tp/
-├── main.go         # Moteur de simulation naïf, boucle de calcul et serveur WebSocket
-├── main_test.go    # Micro-benchmarks (Cache Lines, Heap Allocations, Contigu vs Pointers)
-├── index.html      # Interface web Canvas 2D temps réel avec HUD télémétrique
-├── AUDIT_SEANCE_1.md # Rapport d'audit initial de performance
-├── go.mod          # Module Go
-└── go.sum          # Sommes de contrôle
+├── main.go               # Moteur de simulation, boucle de tick, serveur HTTP/WebSocket, pprof isolé
+├── puddle_index.go       # O2 : index spatial CSR des flaques
+├── bar_lut.go            # O7 : table de Voronoï certifiée du bar le plus proche
+├── frame.go              # O6 : encodeur de frame append-only (octet-identique à encoding/json)
+├── protocol_test.go      # Checksum de référence, scénarios early/rush, benchmarks
+├── *_test.go             # Tests d'équivalence (oracles naïfs) + micro-benchmarks Séance 2
+├── bench/                # Séries brutes (n=10) et comparaisons benchstat de chaque étape
+├── profiles/             # Profils pprof (CPU benchmark et live)
+├── PLAN_OPTIMISATION.md  # Diagnostic, feuille de route, résultats et échecs constructifs
+├── constitution.md       # Garde-fous d'ingénierie imposés aux assistants IA
+├── Makefile              # Commandes de reproductibilité
+└── index.html            # Interface web Canvas 2D temps réel avec HUD télémétrique
 ```
 
 ---
@@ -57,39 +61,37 @@ tp/
 ## 4. Démarrage Rapide
 
 ### Prérequis
-- **Go 1.20+** (installé et accessible dans le `PATH`)
+- **Go 1.26+** (installé et accessible dans le `PATH`)
 - Un navigateur moderne (Chrome, Edge, Firefox)
+- Outils de mesure : `go install golang.org/x/perf/cmd/benchstat@latest`
 
 ### Lancer la Simulation en Temps Réel
 ```bash
-go run main.go
+go run .
 ```
-Puis ouvrir votre navigateur sur :
-👉 **[http://localhost:8080](http://localhost:8080)**
-
-Le terminal affiche un rapport d'exécution à chaque seconde :
-```text
-[BarMash] Tick #00120 | TPS: 21 | Durée: 31.40 ms | RAM Heap: 42.15 MB | GC: 14 | Sobres:  6420 | Buveurs:  2780 | Vomisseurs:   800 | Flaques:  390 | Bières:  14210
-```
+Puis ouvrir **[http://localhost:8080](http://localhost:8080)**. Le profiling pprof est exposé uniquement sur **http://localhost:6060/debug/pprof/**.
 
 ---
 
-## 5. Exécution des Micro-Benchmarks
-
-Pour quantifier l'impact de la disposition mémoire et des allocations :
+## 5. Mesures & Profiling
 
 ```bash
-# Tester l'impact de la disposition mémoire (Contigu vs Séquentiel vs Sauts Aléatoires)
-go test -bench="Benchmark[123]" -benchmem
+# Non-régression logique (checksum bit à bit après 4 000 ticks, MasterSeed = 42)
+go test -run TestGoldenChecksum -v .
 
-# Mesurer le coût global de la boucle de calcul naïve
-go test -bench="BenchmarkUpdateSimulationNaive" -benchmem
+# Tous les tests d'équivalence (index, Voronoï, Sincos, frame octet-identique)
+go test -v .
+
+# Benchmarks d'un tick (early = début de soirée, rush = ~450 flaques) et d'une frame réseau
+go test -run XXX -bench 'UpdateSimulation|BuildFrame' -benchmem -count=10 . > bench/new.txt
+benchstat bench/00_baseline.txt bench/new.txt
+
+# Profil CPU du scénario de croisière + flamegraph
+go test -run XXX -bench 'UpdateSimulation/phase=rush' -cpuprofile cpu.pprof .
+go tool pprof -http=:8081 cpu.pprof
+
+# Profil live de 20 s sur le serveur en cours d'exécution
+curl -o cpu.pprof "http://localhost:6060/debug/pprof/profile?seconds=20"
 ```
 
----
-
-## 6. Prochaines Étapes d'Optimisation (Séances 2 & 3)
-
-1. **Transformation DoD / SoA & Tranche Contiguë :** Remplacer `[]*Client` par un tableau contigu `[]Client` aligné sur 64 octets.
-2. **Zéro-Allocation Mémoire (0 B/op) :** Réutiliser des buffers fixes ou des tableaux de dimensions statiques pour éliminer complètement la pression sur le GC.
-3. **Partitionnement Spatial 1D / 2D (Grille Spatiale) :** Remplacer le scan global brut par un hash spatial contigu pour ramener la complexité à $\mathcal{O}(1)$ par agent.
+Ces commandes sont aussi disponibles via le `Makefile` (`make golden`, `make bench STEP=...`, `make benchstat`, `make profile`, `make escape`).

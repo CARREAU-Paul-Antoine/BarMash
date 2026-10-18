@@ -1,0 +1,35 @@
+goos: windows
+goarch: amd64
+pkg: barmash
+cpu: AMD Ryzen 7 9700X 8-Core Processor             
+                                │ bench/00_baseline.txt │     bench/07_bar_voronoi_lut.txt      │
+                                │        sec/op         │   sec/op     vs base                  │
+UpdateSimulation/phase=early-16            1460.8µ ± 1%   920.8µ ± 3%  -36.96% (p=0.000 n=10)
+UpdateSimulation/phase=rush-16              5.538m ± 0%   1.358m ± 1%  -75.48% (p=0.000 n=10)
+BuildFrame-16                              1089.7µ ± 2%   130.3µ ± 4%  -88.04% (p=0.000 n=10)
+geomean                                     132.9µ        546.2µ       -73.56%                ¹
+¹ benchmark set differs from baseline; geomeans may not be comparable
+
+                                │ bench/00_baseline.txt │       bench/07_bar_voronoi_lut.txt        │
+                                │         B/op          │    B/op     vs base                       │
+UpdateSimulation/phase=early-16          423.5Ki ± 2%     0.0Ki ± 0%  -100.00% (p=0.000 n=10)
+UpdateSimulation/phase=rush-16           418.6Ki ± 0%     0.0Ki ± 0%  -100.00% (p=0.000 n=10)
+BuildFrame-16                            571.8Ki ± 3%     0.0Ki ± 0%  -100.00% (p=0.000 n=10)
+geomean                                               ¹               ?                       ² ¹ ³
+¹ summaries must be >0 to compute geomean
+² benchmark set differs from baseline; geomeans may not be comparable
+³ ratios must be >0 to compute geomean
+
+                                │ bench/00_baseline.txt │        bench/07_bar_voronoi_lut.txt        │
+                                │       allocs/op       │  allocs/op   vs base                       │
+UpdateSimulation/phase=early-16           3.388k ± 2%     0.000k ± 0%  -100.00% (p=0.000 n=10)
+UpdateSimulation/phase=rush-16            3.305k ± 0%     0.000k ± 0%  -100.00% (p=0.000 n=10)
+BuildFrame-16                              6.000 ± 0%      0.000 ± 0%  -100.00% (p=0.000 n=10)
+geomean                                               ¹                ?                       ² ¹ ³
+¹ summaries must be >0 to compute geomean
+² benchmark set differs from baseline; geomeans may not be comparable
+³ ratios must be >0 to compute geomean
+
+              │ bench/00_baseline.txt │    bench/07_bar_voronoi_lut.txt     │
+              │      bytes/frame      │ bytes/frame   vs base               │
+BuildFrame-16            360.0Ki ± 0%   360.0Ki ± 0%  -0.00% (p=0.000 n=10)
