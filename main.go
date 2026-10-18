@@ -1,14 +1,13 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"math"
 	"math/rand"
 	"net/http"
 	"net/http/pprof"
-	"runtime"
+	"runtime/metrics"
 	"time"
 
 	"golang.org/x/net/websocket"
@@ -103,13 +102,13 @@ type BarCounter struct {
 
 // VomitPuddle représente une flaque de vomi au sol bloquant la case.
 // Stockée par valeur (aucun pointeur) : le tableau des flaques est marqué noscan par le runtime.
+// remaining_ticks est dérivé à l'encodage de la frame : ExpireTick - currentTick.
 type VomitPuddle struct {
-	ID             int64   `json:"id"`
-	X              float64 `json:"x"`
-	Y              float64 `json:"y"`
-	Radius         float64 `json:"radius"`
-	RemainingTicks int     `json:"remaining_ticks"` // Calculé à l'encodage : ExpireTick - currentTick
-	ExpireTick     int64   `json:"-"`               // Tick de disparition (horodatage absolu)
+	ID         int64
+	X          float64
+	Y          float64
+	Radius     float64
+	ExpireTick int64 // Tick de disparition (horodatage absolu)
 }
 
 // PuddleLifetimeTicks est identique pour toutes les flaques : elles expirent dans leur ordre de création (FIFO).
@@ -121,14 +120,6 @@ const MaxPuddlesCapacity = 2048
 // -----------------------------------------------------------------------------
 // Télémétrie & Payloads WebSocket
 // -----------------------------------------------------------------------------
-
-// ClientPoint représente la position et l'état compact pour le streaming Canvas
-type ClientPoint struct {
-	X       int16 `json:"x"`
-	Y       int16 `json:"y"`
-	State   int8  `json:"s"` // 0: Sober, 1: Drinking, 2: Vomiting
-	Alcohol uint8 `json:"a"` // Alcoolémie mise à l'échelle (0-255)
-}
 
 // SimStats regroupe les indicateurs de performance et d'état
 type SimStats struct {
@@ -148,14 +139,8 @@ type SimStats struct {
 	NumGC          uint32  `json:"num_gc"`
 }
 
-// FramePayload envoyé à l'interface Web Canvas à chaque tick
-type FramePayload struct {
-	Stats        SimStats      `json:"stats"`
-	WorldSize    float64       `json:"world_size"`
-	Bars         []BarCounter  `json:"bars"`
-	VomitPuddles []VomitPuddle `json:"puddles"`
-	Clients      []ClientPoint `json:"clients"`
-}
+// La frame envoyée à l'interface Web Canvas à chaque tick est encodée par appendFrame (frame.go) :
+// {"stats":SimStats,"world_size":2000,"bars":[...],"puddles":[...],"clients":[{"x","y","s","a"}...]}
 
 // -----------------------------------------------------------------------------
 // État Global de la Simulation (Moteur Naïf)
@@ -197,6 +182,7 @@ func initSimulation(seed int64) {
 	for b := range bars {
 		barCenters[b] = Vec2{X: bars[b].X + bars[b].W*0.5, Y: bars[b].Y + bars[b].H*0.5}
 	}
+	buildBarJSONPrefixes()
 
 	// Deux tranches contiguës allouées une seule fois (ordre des tirages RNG inchangé)
 	clients = make([]Client, TotalClients)
@@ -483,8 +469,10 @@ func updateSimulation() {
 // -----------------------------------------------------------------------------
 
 func getSimulationStats(currentTPS int) SimStats {
-	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
+	metrics.Read(memSamples) // O6 : sans pause Stop-The-World, contrairement à runtime.ReadMemStats
+	heapAlloc := memSamples[0].Value.Uint64()
+	totalAlloc := memSamples[1].Value.Uint64()
+	numGC := memSamples[2].Value.Uint64()
 
 	soberCount, drinkingCount, vomitingCount := 0, 0, 0
 	totalAlcohol := 0.0
@@ -519,40 +507,10 @@ func getSimulationStats(currentTPS int) SimStats {
 		BeersServed:    totalBeersCount,
 		ActivePuddles:  len(vomitPuddles),
 		AvgAlcohol:     math.Round(avgAlcohol*100) / 100,
-		HeapAllocMB:    math.Round((float64(m.HeapAlloc)/(1024*1024))*100) / 100,
-		TotalAllocMB:   math.Round((float64(m.TotalAlloc)/(1024*1024))*100) / 100,
-		NumGC:          m.NumGC,
+		HeapAllocMB:    math.Round((float64(heapAlloc)/(1024*1024))*100) / 100,
+		TotalAllocMB:   math.Round((float64(totalAlloc)/(1024*1024))*100) / 100,
+		NumGC:          uint32(numGC),
 	}
-}
-
-// buildFrame prépare et encode la charge utile envoyée au Canvas Web pour un tick.
-func buildFrame(liveTPS int) ([]byte, error) {
-	stats := getSimulationStats(liveTPS)
-	clientPoints := make([]ClientPoint, len(clients))
-	for idx := range clients {
-		c := &clients[idx]
-		scaledAlc := uint8(math.Min(255, c.Alcohol*50.0))
-		clientPoints[idx] = ClientPoint{
-			X:       int16(positions[idx].X),
-			Y:       int16(positions[idx].Y),
-			State:   int8(c.State),
-			Alcohol: scaledAlc,
-		}
-	}
-
-	for i := range vomitPuddles {
-		vomitPuddles[i].RemainingTicks = int(vomitPuddles[i].ExpireTick - currentTick)
-	}
-
-	payload := FramePayload{
-		Stats:        stats,
-		WorldSize:    WorldSize,
-		Bars:         bars,
-		VomitPuddles: vomitPuddles,
-		Clients:      clientPoints,
-	}
-
-	return json.Marshal(payload)
 }
 
 // -----------------------------------------------------------------------------
@@ -564,6 +522,9 @@ func wsHandler(ws *websocket.Conn) {
 	log.Printf("[WebSocket] Nouvelle connexion client établie.")
 
 	initSimulation(MasterSeed)
+
+	ws.PayloadType = websocket.TextFrame
+	frameBuf := make([]byte, 0, FrameBufferCapacity)
 
 	ticker := time.NewTicker(time.Second / time.Duration(TargetTPS))
 	defer ticker.Stop()
@@ -588,13 +549,11 @@ func wsHandler(ws *websocket.Conn) {
 				stats.SoberCount, stats.DrinkingCount, stats.VomitingCount, stats.ActivePuddles, stats.BeersServed)
 		}
 
-		data, err := buildFrame(liveTPS)
-		if err != nil {
-			log.Printf("[WebSocket] Erreur d'encodage JSON: %v", err)
-			break
-		}
-
-		if err := websocket.Message.Send(ws, string(data)); err != nil {
+		// O6 : encodage append-only dans le buffer de la connexion, puis écriture directe
+		// de la frame texte (plus de conversion string(data) recopiant ~360 Ko).
+		stats := getSimulationStats(liveTPS)
+		frameBuf = appendFrame(frameBuf[:0], &stats)
+		if _, err := ws.Write(frameBuf); err != nil {
 			log.Printf("[WebSocket] Déconnexion du client web.")
 			break
 		}

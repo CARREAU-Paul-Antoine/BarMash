@@ -169,21 +169,19 @@ func BenchmarkUpdateSimulation(b *testing.B) {
 	}
 }
 
-// BenchmarkBuildFrame mesure la préparation + l'encodage d'une frame réseau en régime de croisière.
+// BenchmarkBuildFrame mesure la télémétrie + l'encodage d'une frame réseau en régime de croisière,
+// avec un buffer réutilisé d'une frame à l'autre comme dans wsHandler.
 func BenchmarkBuildFrame(b *testing.B) {
 	snap := scenario(RushWarmupTicks)
 	snap.restore()
+	frameBuf := make([]byte, 0, FrameBufferCapacity)
 	b.ReportAllocs()
 	b.ResetTimer()
-	var size int
 	for i := 0; i < b.N; i++ {
-		data, err := buildFrame(TargetTPS)
-		if err != nil {
-			b.Fatal(err)
-		}
-		size = len(data)
+		stats := getSimulationStats(TargetTPS)
+		frameBuf = appendFrame(frameBuf[:0], &stats)
 	}
-	b.ReportMetric(float64(size), "bytes/frame")
+	b.ReportMetric(float64(len(frameBuf)), "bytes/frame")
 }
 
 // TestSincosBitExact valide O5 : math.Sincos doit rendre exactement les mêmes bits que
