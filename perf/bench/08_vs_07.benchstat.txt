@@ -1,0 +1,25 @@
+goos: windows
+goarch: amd64
+pkg: barmash
+cpu: AMD Ryzen 7 9700X 8-Core Processor
+                                │ perf/bench/08a_o7_interleaved.txt │  perf/bench/08_struct_compact.txt  │
+                                │              sec/op               │   sec/op     vs base               │
+UpdateSimulation/phase=early-16                         875.1µ ± 1%   880.4µ ± 1%       ~ (p=0.063 n=10)
+UpdateSimulation/phase=rush-16                          1.342m ± 1%   1.337m ± 2%       ~ (p=0.481 n=10)
+geomean                                                 1.084m        1.085m       +0.11%
+
+                                │ perf/bench/08a_o7_interleaved.txt │  perf/bench/08_struct_compact.txt   │
+                                │               B/op                │    B/op     vs base                 │
+UpdateSimulation/phase=early-16                        0.000 ± 0%     0.000 ± 0%       ~ (p=1.000 n=10) ¹
+UpdateSimulation/phase=rush-16                         0.000 ± 0%     0.000 ± 0%       ~ (p=1.000 n=10) ¹
+geomean                                                           ²               +0.00%                ²
+¹ all samples are equal
+² summaries must be >0 to compute geomean
+
+                                │ perf/bench/08a_o7_interleaved.txt │  perf/bench/08_struct_compact.txt   │
+                                │             allocs/op             │ allocs/op   vs base                 │
+UpdateSimulation/phase=early-16                        0.000 ± 0%     0.000 ± 0%       ~ (p=1.000 n=10) ¹
+UpdateSimulation/phase=rush-16                         0.000 ± 0%     0.000 ± 0%       ~ (p=1.000 n=10) ¹
+geomean                                                           ²               +0.00%                ²
+¹ all samples are equal
+² summaries must be >0 to compute geomean

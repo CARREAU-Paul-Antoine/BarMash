@@ -41,7 +41,7 @@ const (
 // -----------------------------------------------------------------------------
 
 // ClientState représente l'état d'ébriété et d'action du client
-type ClientState int
+type ClientState uint8
 
 const (
 	StateSober    ClientState = 0 // Sobre / En route vers un bar ou en balade
@@ -70,17 +70,19 @@ type Vec2 struct {
 
 // Client modélise un fêtard dans le bar (données froides et tièdes, lues une fois par tick).
 // O3 : la position est séparée dans la tranche contiguë positions (séparation chaud/froid).
+// O8 : champs triés par taille décroissante et types réduits à leur plage réelle :
+// 80 o -> 48 o. Clients (480 Ko) + positions (160 Ko) tiennent ensemble dans le L2 de 1 Mo.
+// L'identifiant d'un client est son index dans la tranche (l'ancien champ ID était redondant).
 type Client struct {
-	ID             int64
 	Speed          float64
 	Alcohol        float64 // Alcoolémie en g/L (augmente avec les bières)
 	Stamina        float64 // Jauge d'endurance (0.0 - 100.0)
 	Tolerance      float64 // Seuil individuel d'alcoolémie avant risque critique de vomi
-	State          ClientState
-	StateTimer     int // Nombre de ticks restants dans l'état courant
-	TargetBarID    int
-	DrinksConsumed int
 	WanderAngle    float64
+	DrinksConsumed int32
+	StateTimer     int16 // Nombre de ticks restants dans l'état courant (<= 150)
+	TargetBarID    uint8 // 8 comptoirs
+	State          ClientState
 }
 
 // BarCounter représente un comptoir de distribution de bières
@@ -184,7 +186,6 @@ func initSimulation(seed int64) {
 	positions = make([]Vec2, TotalClients)
 	for i := 0; i < TotalClients; i++ {
 		c := &clients[i]
-		c.ID = int64(i)
 		// Répartition initiale pseudo-aléatoire dans le bar
 		positions[i].X = 150.0 + simRng.Float64()*(WorldSize-300.0)
 		positions[i].Y = 150.0 + simRng.Float64()*(WorldSize-300.0)
@@ -195,8 +196,8 @@ func initSimulation(seed int64) {
 		c.Tolerance = 2.2 + simRng.Float64()*2.3
 		c.State = StateSober
 		// Échelonnement initial pour éviter que tous se ruent en même temps à la seconde 0
-		c.StateTimer = simRng.Intn(120)
-		c.TargetBarID = simRng.Intn(len(bars))
+		c.StateTimer = int16(simRng.Intn(120))
+		c.TargetBarID = uint8(simRng.Intn(len(bars)))
 		c.DrinksConsumed = 0
 		c.WanderAngle = simRng.Float64() * 2 * math.Pi
 	}
@@ -310,11 +311,11 @@ func updateSimulation() {
 			if c.StateTimer <= 0 {
 				// Fin de la crise de vomi : le client reprend ses esprits
 				c.State = StateSober
-				c.StateTimer = 90 + simRng.Intn(60) // Pause repos/eau avant d'avoir à nouveau soif
-				c.Alcohol *= 0.50                   // L'estomac est vidé, l'alcoolémie redescend
-				c.Stamina = 40.0                    // Reprend son souffle
+				c.StateTimer = int16(90 + simRng.Intn(60)) // Pause repos/eau avant d'avoir à nouveau soif
+				c.Alcohol *= 0.50                          // L'estomac est vidé, l'alcoolémie redescend
+				c.Stamina = 40.0                           // Reprend son souffle
 				c.WanderAngle = simRng.Float64() * 2 * math.Pi
-				c.TargetBarID = simRng.Intn(len(bars))
+				c.TargetBarID = uint8(simRng.Intn(len(bars)))
 			}
 
 		case StateDrinking:
@@ -348,7 +349,7 @@ func updateSimulation() {
 				vomitProb := math.Min(0.015, excessRatio*0.012)
 				if simRng.Float64() < vomitProb {
 					c.State = StateVomiting
-					c.StateTimer = VomitDurationTicks
+					c.StateTimer = int16(VomitDurationTicks)
 					c.Stamina = 0.0
 
 					// Création d'une nouvelle mare de vomi, ajoutée par valeur dans la tranche préallouée
@@ -367,8 +368,8 @@ func updateSimulation() {
 			// Fin de la bière consommée
 			if c.StateTimer <= 0 {
 				c.State = StateSober
-				c.StateTimer = 60 + simRng.Intn(80) // Période de discussion/pause avant la suivante
-				c.TargetBarID = simRng.Intn(len(bars))
+				c.StateTimer = int16(60 + simRng.Intn(80)) // Période de discussion/pause avant la suivante
+				c.TargetBarID = uint8(simRng.Intn(len(bars)))
 			}
 
 		case StateSober:
@@ -406,7 +407,7 @@ func updateSimulation() {
 				if distToBar <= ServingRadius {
 					// Arrivée au comptoir : commande servie !
 					c.State = StateDrinking
-					c.StateTimer = DrinkDurationTicks
+					c.StateTimer = int16(DrinkDurationTicks)
 					c.DrinksConsumed++
 					targetBar.BeersServed++
 					totalBeersCount++
