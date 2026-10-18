@@ -1,0 +1,32 @@
+goos: windows
+goarch: amd64
+pkg: barmash
+cpu: AMD Ryzen 7 9700X 8-Core Processor             
+                                │ bench/04_zero_alloc.txt │        bench/05_sincos.txt         │
+                                │         sec/op          │   sec/op     vs base               │
+UpdateSimulation/phase=early-16              1065.1µ ± 3%   977.5µ ± 1%  -8.22% (p=0.000 n=10)
+UpdateSimulation/phase=rush-16                1.500m ± 1%   1.431m ± 1%  -4.62% (p=0.000 n=10)
+BuildFrame-16                                 1.278m ± 4%   1.208m ± 2%  -5.43% (p=0.011 n=10)
+geomean                                       1.269m        1.191m       -6.10%
+
+                                │ bench/04_zero_alloc.txt │          bench/05_sincos.txt          │
+                                │          B/op           │     B/op      vs base                 │
+UpdateSimulation/phase=early-16              0.000 ± 0%       0.000 ± 0%       ~ (p=1.000 n=10) ¹
+UpdateSimulation/phase=rush-16               0.000 ± 0%       0.000 ± 0%       ~ (p=1.000 n=10) ¹
+BuildFrame-16                              608.7Ki ± 3%     606.3Ki ± 5%       ~ (p=0.280 n=10)
+geomean                                                 ²                 -0.13%                ²
+¹ all samples are equal
+² summaries must be >0 to compute geomean
+
+                                │ bench/04_zero_alloc.txt │         bench/05_sincos.txt          │
+                                │        allocs/op        │  allocs/op   vs base                 │
+UpdateSimulation/phase=early-16             0.000 ±  0%     0.000 ±  0%       ~ (p=1.000 n=10) ¹
+UpdateSimulation/phase=rush-16              0.000 ±  0%     0.000 ±  0%       ~ (p=1.000 n=10) ¹
+BuildFrame-16                               7.000 ± 14%     7.000 ± 14%       ~ (p=0.628 n=10)
+geomean                                                 ²                +0.00%                ²
+¹ all samples are equal
+² summaries must be >0 to compute geomean
+
+              │ bench/04_zero_alloc.txt │         bench/05_sincos.txt         │
+              │       bytes/frame       │ bytes/frame   vs base               │
+BuildFrame-16              360.0Ki ± 0%   360.0Ki ± 0%  -0.00% (p=0.001 n=10)

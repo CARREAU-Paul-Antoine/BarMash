@@ -185,3 +185,16 @@ func BenchmarkBuildFrame(b *testing.B) {
 	}
 	b.ReportMetric(float64(size), "bytes/frame")
 }
+
+// TestSincosBitExact valide O5 : math.Sincos doit rendre exactement les mêmes bits que
+// math.Sin et math.Cos, y compris pour les grands angles atteints par la marche aléatoire.
+func TestSincosBitExact(t *testing.T) {
+	rng := rand.New(rand.NewSource(MasterSeed))
+	for i := 0; i < 2_000_000; i++ {
+		a := (rng.Float64() - 0.5) * 2 * math.Pow(10, float64(i%6))
+		s, c := math.Sincos(a)
+		if math.Float64bits(s) != math.Float64bits(math.Sin(a)) || math.Float64bits(c) != math.Float64bits(math.Cos(a)) {
+			t.Fatalf("Sincos(%v) diffère de (Sin, Cos)", a)
+		}
+	}
+}

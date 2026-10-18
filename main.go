@@ -353,8 +353,9 @@ func updateSimulation() {
 			if isTrappedInVomit {
 				moveSpeed *= 0.35
 			}
-			vx := math.Cos(c.WanderAngle) * moveSpeed
-			vy := math.Sin(c.WanderAngle) * moveSpeed
+			sinA, cosA := math.Sincos(c.WanderAngle) // O5 : une seule réduction d'argument
+			vx := cosA * moveSpeed
+			vy := sinA * moveSpeed
 
 			pos.X += vx + pushX
 			pos.Y += vy + pushY
@@ -402,8 +403,9 @@ func updateSimulation() {
 				if isTrappedInVomit {
 					moveSpeed *= 0.35
 				}
-				vx := math.Cos(c.WanderAngle) * moveSpeed
-				vy := math.Sin(c.WanderAngle) * moveSpeed
+				sinA, cosA := math.Sincos(c.WanderAngle) // O5 : une seule réduction d'argument
+				vx := cosA * moveSpeed
+				vy := sinA * moveSpeed
 				pos.X += vx + pushX
 				pos.Y += vy + pushY
 			} else {
