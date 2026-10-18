@@ -48,6 +48,40 @@ func buildBarJSONPrefixes() {
 	}
 }
 
+// O6b : table de correspondance des entiers décimaux 0..2047 (compromis espace-temps).
+// Les champs d'un client (x, y ∈ [0, 2000], s ∈ [0, 2], a ∈ [0, 255]) y tiennent tous :
+// 16 Ko de table, et chaque entier s'écrit en un seul store de 4 octets.
+const smallIntCount = 2048
+
+type decimalEntry struct {
+	digits [4]byte
+	n      uint8
+}
+
+var smallInts = func() (t [smallIntCount]decimalEntry) {
+	for v := range t {
+		s := strconv.Itoa(v)
+		copy(t[v].digits[:], s)
+		t[v].n = uint8(len(s))
+	}
+	return t
+}()
+
+// appendSmallInt écrit v en décimal ; repli sur strconv hors de la table.
+func appendSmallInt(b []byte, v int64) []byte {
+	if uint64(v) >= smallIntCount {
+		return strconv.AppendInt(b, v, 10)
+	}
+	e := &smallInts[v]
+	n := len(b)
+	if cap(b)-n < 4 {
+		return append(b, e.digits[:e.n]...)
+	}
+	b = b[:n+4]
+	*(*[4]byte)(b[n:]) = e.digits
+	return b[:n+int(e.n)]
+}
+
 // appendJSONFloat reproduit exactement le formatage float64 de encoding/json.
 func appendJSONFloat(b []byte, f float64) []byte {
 	abs := math.Abs(f)
@@ -120,10 +154,10 @@ func appendFrame(dst []byte, stats *SimStats) []byte {
 		if i > 0 {
 			b = append(b, ',')
 		}
-		b = strconv.AppendInt(append(b, `{"x":`...), int64(int16(positions[i].X)), 10)
-		b = strconv.AppendInt(append(b, `,"y":`...), int64(int16(positions[i].Y)), 10)
-		b = strconv.AppendInt(append(b, `,"s":`...), int64(int8(c.State)), 10)
-		b = strconv.AppendUint(append(b, `,"a":`...), uint64(uint8(math.Min(255, c.Alcohol*50.0))), 10)
+		b = appendSmallInt(append(b, `{"x":`...), int64(int16(positions[i].X)))
+		b = appendSmallInt(append(b, `,"y":`...), int64(int16(positions[i].Y)))
+		b = appendSmallInt(append(b, `,"s":`...), int64(int8(c.State)))
+		b = appendSmallInt(append(b, `,"a":`...), int64(uint8(math.Min(255, c.Alcohol*50.0))))
 		b = append(b, '}')
 	}
 	return append(b, "]}"...)

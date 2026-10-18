@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"math"
 	"math/rand"
+	"strconv"
 	"testing"
 )
 
@@ -93,6 +94,20 @@ func TestAppendJSONFloat(t *testing.T) {
 		want, _ := json.Marshal(v)
 		if got := appendJSONFloat(nil, v); !bytes.Equal(got, want) {
 			t.Fatalf("appendJSONFloat(%v) = %s, encoding/json = %s", v, got, want)
+		}
+	}
+}
+
+// TestAppendSmallInt compare la table décimale à strconv, y compris hors table et buffer plein.
+func TestAppendSmallInt(t *testing.T) {
+	for v := int64(-3000); v <= 3000; v++ {
+		want := strconv.AppendInt([]byte("k:"), v, 10)
+		if got := appendSmallInt([]byte("k:"), v); !bytes.Equal(got, want) {
+			t.Fatalf("appendSmallInt(%d) = %q, attendu %q", v, got, want)
+		}
+		tight := append(make([]byte, 0, 3), 'k', ':')
+		if got := appendSmallInt(tight, v); !bytes.Equal(got, want) {
+			t.Fatalf("appendSmallInt(%d) buffer plein = %q, attendu %q", v, got, want)
 		}
 	}
 }

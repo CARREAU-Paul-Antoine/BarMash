@@ -1,0 +1,32 @@
+goos: windows
+goarch: amd64
+pkg: barmash
+cpu: AMD Ryzen 7 9700X 8-Core Processor             
+                                │ bench/06_frame_encoder.txt │       bench/06b_digit_lut.txt        │
+                                │           sec/op           │    sec/op     vs base                │
+UpdateSimulation/phase=early-16                 1.018m ±  2%   1.011m ±  2%        ~ (p=0.190 n=10)
+UpdateSimulation/phase=rush-16                  1.456m ±  1%   1.448m ± 16%        ~ (p=0.912 n=10)
+BuildFrame-16                                   405.0µ ± 12%   160.2µ ±  7%  -60.45% (p=0.000 n=10)
+geomean                                         843.5µ         616.6µ        -26.90%
+
+                                │ bench/06_frame_encoder.txt │       bench/06b_digit_lut.txt       │
+                                │            B/op            │    B/op     vs base                 │
+UpdateSimulation/phase=early-16                 0.000 ± 0%     0.000 ± 0%       ~ (p=1.000 n=10) ¹
+UpdateSimulation/phase=rush-16                  0.000 ± 0%     0.000 ± 0%       ~ (p=1.000 n=10) ¹
+BuildFrame-16                                   0.000 ± 0%     0.000 ± 0%       ~ (p=1.000 n=10) ¹
+geomean                                                    ²               +0.00%                ²
+¹ all samples are equal
+² summaries must be >0 to compute geomean
+
+                                │ bench/06_frame_encoder.txt │       bench/06b_digit_lut.txt       │
+                                │         allocs/op          │ allocs/op   vs base                 │
+UpdateSimulation/phase=early-16                 0.000 ± 0%     0.000 ± 0%       ~ (p=1.000 n=10) ¹
+UpdateSimulation/phase=rush-16                  0.000 ± 0%     0.000 ± 0%       ~ (p=1.000 n=10) ¹
+BuildFrame-16                                   0.000 ± 0%     0.000 ± 0%       ~ (p=1.000 n=10) ¹
+geomean                                                    ²               +0.00%                ²
+¹ all samples are equal
+² summaries must be >0 to compute geomean
+
+              │ bench/06_frame_encoder.txt │    bench/06b_digit_lut.txt     │
+              │        bytes/frame         │ bytes/frame   vs base          │
+BuildFrame-16                 360.0Ki ± 0%   360.0Ki ± 0%  ~ (p=0.777 n=10)
