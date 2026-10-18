@@ -1,0 +1,1 @@
+ticks=5000 sobres=6052 buveurs=3734 vomisseurs=214 flaques=438 bieres=141838 gc=697 alloc_total_mb=1819.74

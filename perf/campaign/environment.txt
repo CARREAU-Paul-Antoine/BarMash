@@ -1,0 +1,5 @@
+go version go1.27.0 windows/amd64
+windows
+amd64
+2026-10-18T16:04:06Z
+c436637

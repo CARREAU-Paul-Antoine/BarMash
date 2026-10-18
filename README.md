@@ -47,18 +47,22 @@ Moteur de simulation spatiale en temps réel modélisant une soirée festive à 
 ├── puddle_index.go         # O2 : index spatial CSR des flaques
 ├── bar_lut.go              # O7 : table de Voronoï certifiée du bar le plus proche
 ├── frame.go                # O6 : encodeur de frame append-only (octet-identique à encoding/json)
+├── headless.go             # Mode sans serveur (BARMASH_TICKS=N) pour Hyperfine et les profils
 ├── protocol_test.go        # Checksum de référence, scénarios early/rush, benchmarks
-├── *_test.go               # Tests d'équivalence (oracles naïfs) + micro-benchmarks Séance 2
+├── equivalence_test.go     # Chaque optimisation comparée à son implémentation naïve
+├── main_test.go            # Micro-benchmarks de localité (Séance 2)
+├── run_benchmarks.sh       # Campagne complète baseline vs final en une commande
+├── constitution.md         # Garde-fous d'ingénierie imposés aux assistants IA
 ├── web/
 │   └── index.html          # Interface web Canvas 2D temps réel avec HUD télémétrique
 ├── docs/
 │   ├── AUDIT_SEANCE_1.md   # Audit initial de la version naïve
-│   └── PLAN_OPTIMISATION.md # Diagnostic, feuille de route, résultats et échecs constructifs
-├── perf/
-│   ├── bench/              # Séries brutes (n=10) et comparaisons benchstat de chaque étape
-│   └── profiles/           # Profils pprof (CPU benchmark et live)
-├── constitution.md         # Garde-fous d'ingénierie imposés aux assistants IA
-└── Makefile                # Commandes de reproductibilité
+│   ├── PLAN_OPTIMISATION.md # Diagnostic, feuille de route, résultats et échecs constructifs
+│   └── RAPPORT_AUDIT.pdf   # Rapport d'audit final
+└── perf/
+    ├── bench/              # Séries brutes (n=10) et comparaisons benchstat de chaque étape
+    ├── campaign/           # Dernière campagne run_benchmarks.sh (benchstat, Hyperfine, pprof)
+    └── profiles/           # Profils pprof (CPU benchmark et live)
 ```
 
 ---
@@ -99,4 +103,4 @@ go tool pprof -http=:8081 cpu.pprof
 curl -o cpu.pprof "http://localhost:6060/debug/pprof/profile?seconds=20"
 ```
 
-Ces commandes sont aussi disponibles via le `Makefile` (`make golden`, `make bench STEP=...`, `make benchstat`, `make profile`, `make escape`).
+Campagne complète baseline vs version finale en une commande (tests, benchstat, Hyperfine, profils) : `./run_benchmarks.sh` (résultats dans `perf/campaign/`).

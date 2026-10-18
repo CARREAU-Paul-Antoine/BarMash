@@ -38,11 +38,11 @@ Les leviers du TP de référence ne sont **pas** repris tels quels ; chaque prob
 
 | # | Optimisation | Hypothèse matérielle | Vérification |
 | :- | :--- | :--- | :--- |
-| O1 | Flaques stockées par valeur `[]VomitPuddle` + expiration FIFO par `ExpireTick` | Suppression des sauts de pointeurs et des allocations par flaque ; tableau sans pointeur → `noscan`, ignoré par le GC | `make bench STEP=01_puddles_values` puis `benchstat` |
-| O2 | Index spatial CSR des flaques (cellules de 50 u, voisinage 3×3) | O(N × P) → O(N × ~3) : ~450 tests/client → ~3 | `make bench STEP=02_puddle_index` + `make profile` |
-| O3 | Séparation chaud/froid des positions (`[]Vec2`) + rejet AABB du voisinage | Une ligne de cache de 64 o porte 4 positions au lieu de 0,66 client ; le jeu de données chaud (160 Ko) reste en L2 | `make bench STEP=03_hot_cold` |
-| O4 | Zéro allocation résiduelle (tranches mortes, centres de bars précalculés) | 0 B/op et 0 allocs/op sur le tick | `make escape` + `make bench STEP=04_zero_alloc` |
-| O5 | Trigonométrie fusionnée `math.Sincos` | Une seule réduction d'argument au lieu de deux | `make golden` (bit-exactitude) + `benchstat` |
+| O1 | Flaques stockées par valeur `[]VomitPuddle` + expiration FIFO par `ExpireTick` | Suppression des sauts de pointeurs et des allocations par flaque ; tableau sans pointeur → `noscan`, ignoré par le GC | `go test -bench` puis `benchstat` |
+| O2 | Index spatial CSR des flaques (cellules de 50 u, voisinage 3×3) | O(N × P) → O(N × ~3) : ~450 tests/client → ~3 | `go test -bench` + profil `pprof` |
+| O3 | Séparation chaud/froid des positions (`[]Vec2`) + rejet AABB du voisinage | Une ligne de cache de 64 o porte 4 positions au lieu de 0,66 client ; le jeu de données chaud (160 Ko) reste en L2 | `go test -bench` + `benchstat` |
+| O4 | Zéro allocation résiduelle (tranches mortes, centres de bars précalculés) | 0 B/op et 0 allocs/op sur le tick | `go build -gcflags="-m"` + `go test -bench -benchmem` |
+| O5 | Trigonométrie fusionnée `math.Sincos` | Une seule réduction d'argument au lieu de deux | `TestGoldenChecksum` (bit-exactitude) + `benchstat` |
 | O6 | Frame réseau : encodeur JSON append-only, buffer réutilisé, `runtime/metrics` au lieu de `ReadMemStats` | Fin des 586 Ko/frame de déchets et de la pause STW par tick | `BenchmarkBuildFrame` + test d'égalité octet à octet |
 | O7 | Expérimentation : table de Voronoï précalculée pour le bar le plus proche (compromis espace-temps) | À confirmer : la recherche du bar pèse peu dans le profil, le gain attendu est borné par Amdahl | `benchstat` : retenu ou rejeté selon la p-value |
 

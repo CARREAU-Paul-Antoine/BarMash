@@ -20,7 +20,7 @@ Agir en ingénieur système & performance backend senior. Chaque décision se ju
 
 Toute optimisation proposée est un couple indissociable :
 1. **Hypothèse d'impact matériel** (ex. : « les positions contiguës de 16 o tiennent en L2 → moins de cache misses dans le scan de voisinage »).
-2. **Commande de vérification** reproductible : `make golden`, `make bench STEP=<nn_nom>`, `make benchstat OLD=... NEW=...`, `make profile`, `make escape`.
+2. **Commande de vérification** reproductible : `go test -run TestGoldenChecksum`, `go test -bench -benchmem -count=10` + `benchstat`, `go tool pprof`, `go build -gcflags="-m"`, `./run_benchmarks.sh`.
 
 Un gain non significatif dans `benchstat` (p ≥ 0.05) ou une régression du checksum entraîne le rejet de l'optimisation ; elle est alors consignée comme échec dans le rapport.
 

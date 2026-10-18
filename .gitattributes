@@ -1,2 +1,2 @@
-Makefile text eol=lf
 *.pprof binary
+*.sh text eol=lf

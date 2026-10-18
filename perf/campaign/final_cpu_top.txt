@@ -1,0 +1,24 @@
+File: barmash_final.exe
+Build ID: C:\Users\paula\Documents\sup\BarMash\bin\barmash_final.exe2026-10-18 18:04:09.6157446 +0200 CEST
+Type: cpu
+Time: 2026-10-18 18:10:54 CEST
+Duration: 5.54s, Total samples = 5.31s (95.86%)
+Showing nodes accounting for 5.24s, 98.68% of 5.31s total
+Dropped 36 nodes (cum <= 0.03s)
+Showing top 15 nodes out of 20
+      flat  flat%   sum%        cum   cum%
+     3.23s 60.83% 60.83%      5.29s 99.62%  main.updateSimulation
+     0.66s 12.43% 73.26%      0.70s 13.18%  math.Sincos
+     0.21s  3.95% 77.21%      0.21s  3.95%  main.probePuddle (inline)
+     0.21s  3.95% 81.17%      0.21s  3.95%  math.Float64frombits (inline)
+     0.16s  3.01% 84.18%      0.40s  7.53%  main.probePuddles
+     0.16s  3.01% 87.19%      0.50s  9.42%  math.Abs (inline)
+     0.15s  2.82% 90.02%      0.16s  3.01%  main.nearestBar
+     0.13s  2.45% 92.47%      0.13s  2.45%  math.Float64bits (inline)
+     0.11s  2.07% 94.54%      0.21s  3.95%  math/rand.(*Rand).Float64 (inline)
+     0.06s  1.13% 95.67%      0.06s  1.13%  math/rand.(*rngSource).Uint64 (inline)
+     0.05s  0.94% 96.61%      0.08s  1.51%  math.Max (inline)
+     0.03s  0.56% 97.18%      0.03s  0.56%  main.puddleCell (inline)
+     0.03s  0.56% 97.74%      0.03s  0.56%  math.archMax
+     0.03s  0.56% 98.31%      0.09s  1.69%  math/rand.(*rngSource).Int63
+     0.02s  0.38% 98.68%      0.03s  0.56%  math.IsInf (inline)

@@ -1,0 +1,24 @@
+File: barmash_baseline.exe
+Build ID: C:\Users\paula\Documents\sup\BarMash\bin\barmash_baseline.exe2026-10-18 18:04:08.3125687 +0200 CEST
+Type: cpu
+Time: 2026-10-18 18:10:39 CEST
+Duration: 13.97s, Total samples = 14.42s (103.20%)
+Showing nodes accounting for 13.49s, 93.55% of 14.42s total
+Dropped 120 nodes (cum <= 0.07s)
+Showing top 15 nodes out of 59
+      flat  flat%   sum%        cum   cum%
+    11.59s 80.37% 80.37%     12.88s 89.32%  main.updateSimulation
+     0.43s  2.98% 83.36%      0.44s  3.05%  math.cos
+     0.27s  1.87% 85.23%      0.30s  2.08%  runtime.preemptM
+     0.23s  1.60% 86.82%      0.25s  1.73%  math.sin
+     0.21s  1.46% 88.28%      0.30s  2.08%  runtime.lock2
+     0.18s  1.25% 89.53%      0.18s  1.25%  runtime.semawakeup
+     0.15s  1.04% 90.57%      0.20s  1.39%  runtime.unlock2
+     0.11s  0.76% 91.33%      0.11s  0.76%  math.archMax
+     0.09s  0.62% 91.96%      0.09s  0.62%  runtime.sysUsedOS
+     0.08s  0.55% 92.51%      0.08s  0.55%  math/rand.(*rngSource).Uint64 (inline)
+     0.05s  0.35% 92.86%      0.14s  0.97%  math/rand.(*Rand).Float64 (inline)
+     0.04s  0.28% 93.13%      0.15s  1.04%  math.Max (inline)
+     0.03s  0.21% 93.34%      0.16s  1.11%  runtime.scanObject
+     0.02s  0.14% 93.48%      0.26s  1.80%  runtime.mallocgc
+     0.01s 0.069% 93.55%      0.09s  0.62%  math/rand.(*Rand).Int63 (inline)
