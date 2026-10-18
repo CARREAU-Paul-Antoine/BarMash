@@ -1,0 +1,48 @@
+goos: windows
+goarch: amd64
+pkg: barmash
+cpu: AMD Ryzen 7 9700X 8-Core Processor             
+                                   │ C:/Users/paula/Documents/sup/BarMash/perf/campaign/bench_io.txt │
+                                   │                             sec/op                              │
+BuildFrameBinary-16                                                                     28.88µ ±  2%
+TelemetryInsert/mode=autocommit-16                                                      3.466m ±  1%
+TelemetryInsert/mode=batch-16                                                           336.6µ ±  2%
+HistoryQuery/index=false-16                                                             10.85m ±  2%
+HistoryQuery/index=true-16                                                              281.8µ ±  2%
+HistoryHandler/pool=false-16                                                            1.478m ± 22%
+HistoryHandler/pool=true-16                                                             903.3µ ± 25%
+geomean                                                                                 753.2µ
+
+                    │ C:/Users/paula/Documents/sup/BarMash/perf/campaign/bench_io.txt │
+                    │                           bytes/frame                           │
+BuildFrameBinary-16                                                      61.20Ki ± 0%
+
+                                   │ C:/Users/paula/Documents/sup/BarMash/perf/campaign/bench_io.txt │
+                                   │                              B/op                               │
+BuildFrameBinary-16                                                                     0.000 ± 0%
+TelemetryInsert/mode=autocommit-16                                                    106.0Ki ± 0%
+TelemetryInsert/mode=batch-16                                                         58.90Ki ± 0%
+HistoryQuery/index=false-16                                                           141.8Ki ± 0%
+HistoryQuery/index=true-16                                                            17.74Ki ± 0%
+HistoryHandler/pool=false-16                                                          558.7Ki ± 0%
+HistoryHandler/pool=true-16                                                           56.79Ki ± 1%
+geomean                                                                                            ¹
+¹ summaries must be >0 to compute geomean
+
+                                   │ C:/Users/paula/Documents/sup/BarMash/perf/campaign/bench_io.txt │
+                                   │                            allocs/op                            │
+BuildFrameBinary-16                                                                     0.000 ± 0%
+TelemetryInsert/mode=autocommit-16                                                     2.327k ± 0%
+TelemetryInsert/mode=batch-16                                                          1.337k ± 0%
+HistoryQuery/index=false-16                                                            4.776k ± 0%
+HistoryQuery/index=true-16                                                             2.137k ± 0%
+HistoryHandler/pool=false-16                                                           7.058k ± 0%
+HistoryHandler/pool=true-16                                                            7.039k ± 0%
+geomean                                                                                            ¹
+¹ summaries must be >0 to compute geomean
+
+                                   │ C:/Users/paula/Documents/sup/BarMash/perf/campaign/bench_io.txt │
+                                   │                             sec/row                             │
+TelemetryInsert/mode=autocommit-16                                                       34.66µ ± 1%
+TelemetryInsert/mode=batch-16                                                            3.366µ ± 2%
+geomean                                                                                  10.80µ

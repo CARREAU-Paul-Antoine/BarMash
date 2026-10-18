@@ -19,7 +19,7 @@
     <div class="summary">
       <b class="label">PÉRIMÈTRE DE L'AUDIT</b>
       <p>BarMash simule une soirée dans un bar : 10 000 clients se déplacent vers 8 comptoirs, boivent, se bousculent et laissent des flaques qui ralentissent leurs voisins. Le serveur calcule un tick toutes les 33,3 ms et pousse l'état complet au navigateur par WebSocket.</p>
-      <p>L'audit part de la version naïve livrée, mesure ses goulots réels, puis applique et vérifie une série d'optimisations. Chaque étape est validée par une empreinte bit à bit de l'état de la simulation : le comportement fonctionnel n'a pas changé d'un octet.</p>
+      <p>L'audit part de la version naïve livrée, mesure ses goulots réels, puis applique et vérifie des optimisations sur trois axes : calcul et mémoire, concurrence, I/O réseau et persistance. Jusqu'à la parallélisation, chaque étape reproduit l'état de la simulation au bit près. La parallélisation impose ensuite un changement de modèle, documenté et vérifié.</p>
     </div>
   </div>
   <div class="footer">
@@ -37,7 +37,7 @@
   <h3>Matériel et logiciel</h3>
   <table>
     <tr><th style="width:24%">Composant</th><th>Spécification</th><th style="width:36%">Impact sur l'audit</th></tr>
-    <tr><td>CPU</td><td>AMD Ryzen 7 9700X (Zen 5) — 8 cœurs / 16 threads, 3,8 GHz (boost 5,5 GHz)</td><td>Boucle de simulation mono-thread : un seul cœur sollicité</td></tr>
+    <tr><td>CPU</td><td>AMD Ryzen 7 9700X (Zen 5) — 8 cœurs / 16 threads, 3,8 GHz (boost 5,5 GHz)</td><td>Baseline mono-thread ; version finale : 8 workers, un par cœur physique</td></tr>
     <tr><td>Caches</td><td>L1d 48 Ko + L1i 32 Ko par cœur • L2 1 Mo par cœur • L3 32 Mo partagé</td><td>Les données chaudes (positions : 160 Ko) tiennent en L2</td></tr>
     <tr><td>Mémoire</td><td>32 Go DDR5-5600 (2 × 16 Go Micron, CL36)</td><td>Pas de contrainte de capacité</td></tr>
     <tr><td>Système</td><td>Windows 11 Professionnel (build 26300), x86_64</td><td>Mesures sous Windows, pas sous Linux</td></tr>
@@ -52,25 +52,26 @@
     <tr><td>Coût d'une frame réseau</td><td>Télémétrie + encodage de la frame complète (10 000 clients, ~360 Ko de JSON)</td><td>idem</td></tr>
     <tr><td>Bout en bout</td><td>Hyperfine sur le binaire en mode headless : 5 000 ticks de simulation, du lancement à la sortie</td><td><code>--warmup 3 --runs 10 -N</code> (sans shell intermédiaire)</td></tr>
     <tr><td>Profils</td><td>pprof CPU et allocations sur les mêmes 5 000 ticks, plus un profil live de 20 s sur le serveur réel</td><td>Échantillonnage 100 Hz</td></tr>
-    <tr><td>Non-régression</td><td>Empreinte FNV-1a de tout l'état (positions, alcoolémie, timers, flaques, RNG) après 4 000 ticks</td><td>Doit rester <code>0xaa36b4f0b73c614c</code></td></tr>
+    <tr><td>I/O</td><td>Frame binaire vs JSON ; SQLite sur disque (WAL) avec 200 000 lignes d'historique ; handler HTTP</td><td>n = 10 • benchstat</td></tr>
+    <tr><td>Non-régression</td><td>Empreinte FNV-1a de tout l'état (positions, alcoolémie, timers, flaques, RNG) après 4 000 ticks</td><td>Jusqu'à O8 : <code>0xaa36…614c</code> (naïf) • depuis O9 : <code>0xfcd1…c638</code>, quel que soit le nombre de workers</td></tr>
   </table>
 
   <h3>Deux scénarios de charge</h3>
   <p>Le premier constat de l'audit concerne le benchmark fourni : il ne mesurait que le début de soirée, quand aucune flaque n'existe. Or les flaques n'apparaissent qu'après ~2 500 ticks et leur coût domine ensuite. Deux scénarios figés ont donc été créés.</p>
   <table>
     <tr><th>Scénario</th><th>État</th><th class="num">Tick naïf</th></tr>
-    <tr><td><b>early</b> — début de soirée</td><td>Tick 0, aucune flaque</td><td class="num">1,645 ms</td></tr>
-    <tr><td><b>rush</b> — régime de croisière</td><td>Tick 5 000, ~450 flaques actives, 214 clients en train de vomir</td><td class="num">5,846 ms</td></tr>
+    <tr><td><b>early</b> — début de soirée</td><td>Tick 0, aucune flaque</td><td class="num">1,539 ms</td></tr>
+    <tr><td><b>rush</b> — régime de croisière</td><td>Tick 5 000, ~450 flaques actives, 214 clients en train de vomir</td><td class="num">5,934 ms</td></tr>
   </table>
 
   <h3>Baseline mesurée avec Hyperfine (5 000 ticks, version naïve)</h3>
   <div class="kpis">
-    <div class="kpi"><div class="v">13,81 s</div><div class="l">Moyenne</div></div>
-    <div class="kpi"><div class="v">13,78 s</div><div class="l">Médiane</div></div>
-    <div class="kpi"><div class="v">± 0,095 s</div><div class="l">Écart-type (σ)</div></div>
-    <div class="kpi"><div class="v">0,0090 s²</div><div class="l">Variance (σ²)</div></div>
+    <div class="kpi"><div class="v">15,29 s</div><div class="l">Moyenne</div></div>
+    <div class="kpi"><div class="v">14,83 s</div><div class="l">Médiane</div></div>
+    <div class="kpi"><div class="v">± 1,00 s</div><div class="l">Écart-type (σ)</div></div>
+    <div class="kpi"><div class="v">1,00 s²</div><div class="l">Variance (σ²)</div></div>
   </div>
-  <p class="small muted">Min 13,71 s • max 13,95 s • coefficient de variation 0,69 %. La dispersion est faible : le protocole (machine au repos, warmup) suffit à isoler le bruit.</p>
+  <p class="small muted">Min 14,35 s • max 17,11 s • coefficient de variation 6,5 %. La version finale reste à 0,7 % dans la même session (2,24 ± 0,02 s). La dispersion de la baseline vient de quelques runs plus lents (max 17,1 s) : le binaire naïf déclenche 647 cycles de GC concurrents sur les autres cœurs, ce qui le rend sensible aux variations de fréquence. La médiane (14,83 s) sert donc de référence.</p>
 </section>
 
 <!-- ===================================================== 2. DIAGNOSTIC -->
@@ -81,34 +82,34 @@
     <div class="annot">
       <img src="img/flame_baseline.png" alt="Flamegraph CPU de la version naïve">
       <span class="badge ko" style="left:45%;top:53%">1</span>
-      <span class="badge" style="left:81.5%;top:73%">2</span>
-      <span class="badge" style="left:85.6%;top:80%">3</span>
-      <span class="badge ko" style="left:93%;top:68%">4</span>
+      <span class="badge" style="left:81%;top:73%">2</span>
+      <span class="badge" style="left:84.5%;top:80%">3</span>
+      <span class="badge ko" style="left:92%;top:68%">4</span>
     </div>
-    <figcaption>Figure 1 — Flamegraph CPU réel de la version naïve (pprof, 5 000 ticks headless, <code>perf/campaign/baseline_cpu.pprof</code>). Total 14,42 s. Repères : (1) plateau de <code>updateSimulation</code>, où les boucles des flaques et de la bousculade sont écrites en ligne (72,6 % à elles deux) ; (2) <code>Cos</code> / <code>Sin</code> ; (3) <code>makeslice</code> / <code>mallocgc</code> ; (4) tours du GC (<code>bgsweep</code>, <code>gcBgMarkWorker</code>).</figcaption>
+    <figcaption>Figure 1 — Flamegraph CPU réel de la version naïve (pprof, 5 000 ticks headless, <code>perf/campaign/baseline_cpu.pprof</code>). Total 15,23 s. Repères : (1) plateau de <code>updateSimulation</code>, où les boucles des flaques et de la bousculade sont écrites en ligne (70,6 % à elles deux) ; (2) <code>Cos</code> / <code>Sin</code> ; (3) <code>makeslice</code> / <code>mallocgc</code> ; (4) tours du GC (<code>bgsweep</code>, <code>gcBgMarkWorker</code>).</figcaption>
   </figure>
 
   <p>Le flamegraph ne montre qu'un grand plateau, car les boucles chaudes sont écrites en ligne dans <code>updateSimulation</code>. Le détail vient donc du profil ligne à ligne :</p>
 
   <table>
     <tr><th style="width:4%">Repère</th><th>Zone du hot path</th><th class="num">5 000 ticks</th><th class="num">rush</th><th>Cause identifiée</th></tr>
-    <tr><td>1</td><td><b>Scan des flaques</b> — chaque client teste chaque flaque</td><td class="num"><b>39,5 %</b></td><td class="num"><b>~60 %</b></td><td>O(N × P) : 10 000 × ~450 = 4,5 M tests et racines carrées par tick</td></tr>
-    <tr><td>1</td><td><b>Scan de bousculade</b> — 60 voisins par client</td><td class="num"><b>33,1 %</b></td><td class="num"><b>~33 %</b></td><td>600 k lectures de <code>*Client</code> de 96 o via pointeurs ; <code>math.Sqrt</code> sur tous les voisins</td></tr>
-    <tr><td>2</td><td>Trigonométrie du déplacement</td><td class="num">4,7 %</td><td class="num">~5 %</td><td><code>math.Cos</code> + <code>math.Sin</code> séparés pour chaque client mobile</td></tr>
-    <tr><td>3</td><td>Allocations dans la boucle</td><td class="num">1,9 %</td><td class="num">~2 %</td><td><code>makeslice</code> : <code>make([]BarDistance)</code>, <code>neighborsCrowd</code></td></tr>
-    <tr><td>4</td><td>Garbage Collector (balayage + marquage)</td><td class="num">~5 %</td><td class="num">—</td><td><code>bgsweep</code> 3,4 % + <code>gcBgMarkWorker</code> 1,9 % : conséquence directe de 3</td></tr>
-    <tr><td></td><td>Recherche du bar le plus proche</td><td class="num">2,4 %</td><td class="num">—</td><td>8 racines carrées par client assoiffé</td></tr>
+    <tr><td>1</td><td><b>Scan des flaques</b> — chaque client teste chaque flaque</td><td class="num"><b>38,6 %</b></td><td class="num"><b>~60 %</b></td><td>O(N × P) : 10 000 × ~450 = 4,5 M tests et racines carrées par tick</td></tr>
+    <tr><td>1</td><td><b>Scan de bousculade</b> — 60 voisins par client</td><td class="num"><b>32,0 %</b></td><td class="num"><b>~33 %</b></td><td>600 k lectures de <code>*Client</code> de 96 o via pointeurs ; <code>math.Sqrt</code> sur tous les voisins</td></tr>
+    <tr><td>2</td><td>Trigonométrie du déplacement</td><td class="num">5,4 %</td><td class="num">~5 %</td><td><code>math.Cos</code> + <code>math.Sin</code> séparés pour chaque client mobile</td></tr>
+    <tr><td>3</td><td>Allocations dans la boucle</td><td class="num">2,3 %</td><td class="num">~2 %</td><td><code>makeslice</code> : <code>make([]BarDistance)</code>, <code>neighborsCrowd</code></td></tr>
+    <tr><td>4</td><td>Garbage Collector (balayage + marquage)</td><td class="num">4,7 %</td><td class="num">—</td><td><code>bgsweep</code> 3,8 % + <code>gcBgMarkWorker</code> 0,9 % : conséquence directe de 3</td></tr>
+    <tr><td></td><td>Recherche du bar le plus proche</td><td class="num">2,9 %</td><td class="num">—</td><td>8 racines carrées par client assoiffé</td></tr>
   </table>
-  <p class="small muted">Part du temps CPU total (14,42 s) attribuée ligne à ligne avec <code>pprof -top -lines</code>. Le scan des flaques pèse moins sur 5 000 ticks parce que la première moitié de la soirée n'en contient aucune.</p>
+  <p class="small muted">Part du temps CPU total (15,23 s) attribuée ligne à ligne avec <code>pprof -top -lines</code>. Le scan des flaques pèse moins sur 5 000 ticks parce que la première moitié de la soirée n'en contient aucune.</p>
 
   <h3>Mémoire et Garbage Collector</h3>
   <table>
     <tr><th>Indicateur (version naïve)</th><th class="num">Valeur</th><th>Origine</th></tr>
-    <tr><td>Allocations par tick</td><td class="num">423 Ko • 3 385 allocs</td><td><code>make([]BarDistance, len(bars))</code> par client assoiffé (taille non constante → tas)</td></tr>
-    <tr><td>Allocations par frame réseau</td><td class="num">603 Ko • 7 allocs</td><td><code>[]ClientPoint</code> + <code>json.Marshal</code> + conversion <code>string(data)</code></td></tr>
-    <tr><td>Coût d'une frame réseau</td><td class="num">1,224 ms</td><td>Réflexion de <code>encoding/json</code> sur 10 000 structures</td></tr>
-    <tr><td>5 000 ticks sans serveur</td><td class="num">697 cycles GC • 1 820 Mo alloués</td><td>Soit ~364 Ko de déchets par tick, collectés en continu (repère 4)</td></tr>
-    <tr><td>Serveur réel, 25 s</td><td class="num">528 cycles GC • 1 611 Mo alloués</td><td>S'y ajoute <code>runtime.ReadMemStats</code> (pause Stop-The-World) à chaque tick</td></tr>
+    <tr><td>Allocations par tick</td><td class="num">426 Ko • 3 405 allocs</td><td><code>make([]BarDistance, len(bars))</code> par client assoiffé (taille non constante → tas)</td></tr>
+    <tr><td>Allocations par frame réseau</td><td class="num">574 Ko • 6 allocs</td><td><code>[]ClientPoint</code> + <code>json.Marshal</code> + conversion <code>string(data)</code></td></tr>
+    <tr><td>Coût d'une frame réseau</td><td class="num">1,185 ms</td><td>Réflexion de <code>encoding/json</code> sur 10 000 structures</td></tr>
+    <tr><td>5 000 ticks sans serveur</td><td class="num">647 cycles GC • 1 820 Mo alloués</td><td>Soit ~364 Ko de déchets par tick, collectés en continu (repère 4)</td></tr>
+    <tr><td>Serveur réel, 25 s</td><td class="num">493 cycles GC</td><td>S'y ajoute <code>runtime.ReadMemStats</code> (pause Stop-The-World) à chaque tick</td></tr>
   </table>
 
   <div class="box note">
@@ -125,49 +126,81 @@
 <section class="page">
   <div class="runhead"><h2>3. Journal d'optimisation</h2><span>BarMash • Audit de performance</span></div>
 
-  <p>Les actions sont ordonnées selon la loi d'Amdahl : d'abord la zone qui pèse le plus. Chaque ligne correspond à un commit et à une série benchstat (n = 10) comparée à l'étape précédente. Les écarts non significatifs (p ≥ 0,05) sont notés « ~ ».</p>
+  <p>Les actions sont ordonnées selon la loi d'Amdahl, en commençant par la zone qui pèse le plus. Chaque ligne correspond à un commit et à une série benchstat (n = 10) comparée à l'étape précédente. « ~ » signale un écart non significatif (p ≥ 0,05).</p>
 
-  <table>
-    <tr><th style="width:5%">#</th><th style="width:25%">Action</th><th>Hypothèse matérielle</th><th class="num" style="width:11%">early</th><th class="num" style="width:11%">rush</th><th style="width:9%">Verdict</th></tr>
-    <tr><td colspan="6" style="background:var(--soft);font-weight:700;font-size:8pt">Calcul CPU et algorithmique</td></tr>
+  <table class="compact">
+    <tr><th style="width:5%">#</th><th style="width:27%">Action</th><th>Hypothèse matérielle</th><th class="num" style="width:10%">early</th><th class="num" style="width:10%">rush</th><th style="width:8%">Verdict</th></tr>
+    <tr><td colspan="6" style="background:var(--soft);font-weight:700;font-size:7.8pt">Calcul CPU et algorithmique</td></tr>
     <tr><td>O2</td><td>Index spatial des flaques (grille 32 × 32, tri par comptage)</td><td>4,5 M tests → ~4 candidats par client</td><td class="num">~</td><td class="num gain">−66,1 %</td><td><span class="tag ok">retenu</span></td></tr>
     <tr><td>O5</td><td><code>math.Sincos</code> au lieu de <code>Cos</code> + <code>Sin</code></td><td>Une seule réduction d'argument</td><td class="num gain">−8,2 %</td><td class="num gain">−4,6 %</td><td><span class="tag ok">retenu</span></td></tr>
     <tr><td>O7</td><td>Table précalculée du bar le plus proche (zones de Voronoï)</td><td>8 racines carrées → 1 ; table de 6,4 Ko en L1</td><td class="num gain">−8,9 %</td><td class="num gain">−6,2 %</td><td><span class="tag ok">retenu</span></td></tr>
-    <tr><td colspan="6" style="background:var(--soft);font-weight:700;font-size:8pt">Mémoire et localité de cache</td></tr>
+    <tr><td colspan="6" style="background:var(--soft);font-weight:700;font-size:7.8pt">Mémoire et localité de cache</td></tr>
     <tr><td>O1</td><td>Flaques stockées par valeur, expiration FIFO</td><td>Supprimer les sauts de pointeurs</td><td class="num loss">+1,4 %</td><td class="num loss">+0,6 %</td><td><span class="tag ko">échec</span></td></tr>
-    <tr><td>O3</td><td>Positions isolées dans un tableau contigu de 16 o + rejet rapide par boîte englobante</td><td>160 Ko en L2, 4 positions par ligne de 64 o ; 97 % des voisins rejetés sans <code>Sqrt</code></td><td class="num gain">−21,0 %</td><td class="num gain">−15,5 %</td><td><span class="tag ok">retenu</span></td></tr>
+    <tr><td>O3</td><td>Positions dans un tableau contigu de 16 o + rejet par boîte englobante</td><td>160 Ko en L2 ; 97 % des voisins rejetés sans <code>Sqrt</code></td><td class="num gain">−21,0 %</td><td class="num gain">−15,5 %</td><td><span class="tag ok">retenu</span></td></tr>
     <tr><td>O4</td><td>Suppression des allocations par tick</td><td>Plus de pression GC dans la boucle</td><td class="num gain">−9,9 %</td><td class="num gain">−6,1 %</td><td><span class="tag ok">0 alloc</span></td></tr>
     <tr><td>O8</td><td>Compactage de <code>Client</code> : 80 o → 48 o (tri des champs, types réduits)</td><td>Clients + positions (640 Ko) dans le L2</td><td class="num">~</td><td class="num">~</td><td><span class="tag na">neutre</span></td></tr>
-    <tr><td colspan="6" style="background:var(--soft);font-weight:700;font-size:8pt">I/O réseau</td></tr>
-    <tr><td>O6</td><td>Encodeur JSON écrit à la main dans un buffer réutilisé, <code>runtime/metrics</code>, écriture WebSocket directe</td><td>0 déchet par frame, plus de pause Stop-The-World</td><td colspan="2" class="num gain">frame −66,5 %</td><td><span class="tag ok">retenu</span></td></tr>
+    <tr><td colspan="6" style="background:var(--soft);font-weight:700;font-size:7.8pt">Concurrence et scalabilité CPU</td></tr>
+    <tr><td>O9</td><td>Tick en deux phases : forces calculées en parallèle par 8 workers, machine à états séquentielle</td><td>Phase parallèle ≈ 60 % du tick ; distribution par compteur atomique, sans verrou ni faux partage</td><td class="num gain">−54,2 %</td><td class="num gain">−55,1 %</td><td><span class="tag ok">retenu</span></td></tr>
+    <tr><td colspan="6" style="background:var(--soft);font-weight:700;font-size:7.8pt">I/O réseau et persistance</td></tr>
+    <tr><td>O6</td><td>Encodeur JSON écrit à la main, buffer réutilisé, <code>runtime/metrics</code></td><td>0 déchet par frame, plus de pause Stop-The-World</td><td colspan="2" class="num gain">frame −66,5 %</td><td><span class="tag ok">retenu</span></td></tr>
     <tr><td>O6b</td><td>Table des entiers 0..2047 précalculée</td><td>40 000 entiers écrits en un store de 4 o</td><td colspan="2" class="num gain">frame −60,5 %</td><td><span class="tag ok">retenu</span></td></tr>
+    <tr><td>O10</td><td>Frame binaire à champs fixes (6 o par client)</td><td>~6 × moins d'octets à écrire et à envoyer</td><td colspan="2" class="num gain">−78 % • 360 → 61 Ko</td><td><span class="tag ok">retenu</span></td></tr>
+    <tr><td rowspan="3">O11</td><td>Historique SQLite : insertions groupées en transaction</td><td>1 commit pour 100 lignes au lieu de 100</td><td colspan="2" class="num gain">36,1 → 3,6 µs/ligne</td><td><span class="tag ok">×10</span></td></tr>
+    <tr><td>Index composite <code>(session_id, tick)</code></td><td><code>SCAN</code> de 200 000 lignes → <code>SEARCH USING INDEX</code></td><td colspan="2" class="num gain">11,47 → 0,28 ms</td><td><span class="tag ok">×40</span></td></tr>
+    <tr><td><code>sync.Pool</code> sur le buffer de réponse <code>/api/history</code></td><td>Buffer déjà dimensionné, réutilisé d'une requête à l'autre</td><td colspan="2" class="num gain">559 → 57 Ko/requête</td><td><span class="tag ok">−90 %</span></td></tr>
   </table>
-  <p class="small muted">Contrôles systématiques : empreinte bit à bit inchangée à chaque étape ; frame octet-identique à <code>encoding/json</code> (le front n'a pas été modifié) ; index, table de Voronoï et <code>Sincos</code> comparés à l'implémentation naïve sur plusieurs millions de points.</p>
+  <p class="small muted">Contrôles : empreinte bit à bit identique au naïf jusqu'à O8, puis invariante au nombre de workers ; frame JSON octet-identique à <code>encoding/json</code> ; frame binaire décodée et comparée à l'état ; index, table de Voronoï et <code>Sincos</code> comparés à l'implémentation naïve sur des millions de points.</p>
 
   <h3>Évolution du coût d'un tick en croisière (scénario rush)</h3>
-  <svg class="chart" viewBox="0 0 640 190" width="100%" role="img" aria-label="Temps par tick en croisière à chaque étape">
-    <g transform="translate(0,4)">
+  <svg class="chart" viewBox="0 0 640 156" width="100%" role="img" aria-label="Temps par tick en croisière à chaque étape">
+    <g transform="translate(0,2)">
       <!-- échelle : 58,9 px par ms, origine x=110 -->
-      <line class="axis" x1="110" y1="0" x2="110" y2="180"/>
-      <g><text x="100" y="12" text-anchor="end">Baseline</text><rect x="110" y="3" width="326" height="12" rx="2" fill="#a7b0bd"/><text class="val" x="442" y="12">5,54 ms</text></g>
-      <g><text x="100" y="31" text-anchor="end">O1 flaques/valeur</text><rect x="110" y="22" width="328" height="12" rx="2" fill="#a7b0bd"/><text class="val" x="444" y="31">5,57 ms (échec)</text></g>
-      <g><text x="100" y="50" text-anchor="end">O2 index flaques</text><rect x="110" y="41" width="111" height="12" rx="2" fill="#2a78d6"/><text class="val" x="227" y="50">1,89 ms</text></g>
-      <g><text x="100" y="69" text-anchor="end">O3 chaud/froid</text><rect x="110" y="60" width="94" height="12" rx="2" fill="#2a78d6"/><text class="val" x="210" y="69">1,60 ms</text></g>
-      <g><text x="100" y="88" text-anchor="end">O4 zéro alloc</text><rect x="110" y="79" width="88" height="12" rx="2" fill="#2a78d6"/><text class="val" x="204" y="88">1,50 ms</text></g>
-      <g><text x="100" y="107" text-anchor="end">O5 Sincos</text><rect x="110" y="98" width="84" height="12" rx="2" fill="#2a78d6"/><text class="val" x="200" y="107">1,43 ms</text></g>
-      <g><text x="100" y="126" text-anchor="end">O6 / O6b réseau</text><rect x="110" y="117" width="85" height="12" rx="2" fill="#2a78d6"/><text class="val" x="201" y="126">1,45 ms (tick non concerné)</text></g>
-      <g><text x="100" y="145" text-anchor="end">O7 Voronoï</text><rect x="110" y="136" width="80" height="12" rx="2" fill="#2a78d6"/><text class="val" x="196" y="145">1,36 ms</text></g>
-      <g><text x="100" y="164" text-anchor="end">O8 compactage</text><rect x="110" y="155" width="79" height="12" rx="2" fill="#2a78d6"/><text class="val" x="195" y="164">1,34 ms</text></g>
+      <line class="axis" x1="110" y1="0" x2="110" y2="152"/>
+      <g><text x="100" y="10" text-anchor="end">Baseline</text><rect x="110" y="2" width="326" height="10" rx="2" fill="#a7b0bd"/><text class="val" x="442" y="10">5,54 ms</text></g>
+      <g><text x="100" y="25" text-anchor="end">O1 flaques/valeur</text><rect x="110" y="17" width="328" height="10" rx="2" fill="#a7b0bd"/><text class="val" x="444" y="25">5,57 ms (échec)</text></g>
+      <g><text x="100" y="40" text-anchor="end">O2 index flaques</text><rect x="110" y="32" width="111" height="10" rx="2" fill="#2a78d6"/><text class="val" x="227" y="40">1,89 ms</text></g>
+      <g><text x="100" y="55" text-anchor="end">O3 chaud/froid</text><rect x="110" y="47" width="94" height="10" rx="2" fill="#2a78d6"/><text class="val" x="210" y="55">1,60 ms</text></g>
+      <g><text x="100" y="70" text-anchor="end">O4 zéro alloc</text><rect x="110" y="62" width="88" height="10" rx="2" fill="#2a78d6"/><text class="val" x="204" y="70">1,50 ms</text></g>
+      <g><text x="100" y="85" text-anchor="end">O5 Sincos</text><rect x="110" y="77" width="84" height="10" rx="2" fill="#2a78d6"/><text class="val" x="200" y="85">1,43 ms</text></g>
+      <g><text x="100" y="100" text-anchor="end">O6 / O6b réseau</text><rect x="110" y="92" width="85" height="10" rx="2" fill="#2a78d6"/><text class="val" x="201" y="100">1,45 ms (tick non concerné)</text></g>
+      <g><text x="100" y="115" text-anchor="end">O7 Voronoï</text><rect x="110" y="107" width="80" height="10" rx="2" fill="#2a78d6"/><text class="val" x="196" y="115">1,36 ms</text></g>
+      <g><text x="100" y="130" text-anchor="end">O8 compactage</text><rect x="110" y="122" width="79" height="10" rx="2" fill="#2a78d6"/><text class="val" x="195" y="130">1,34 ms</text></g>
+      <g><text x="100" y="145" text-anchor="end">O9 8 workers</text><rect x="110" y="137" width="36" height="10" rx="2" fill="#2a78d6"/><text class="val" x="152" y="145">0,61 ms</text></g>
     </g>
   </svg>
-  <p class="small muted">Valeurs médianes benchstat, mesurées étape par étape pendant le développement. L'essentiel du gain (−66 %) vient d'une seule action, O2 : c'était le plateau le plus large du profil. Le comparatif final de la section 5 est refait dans une même session, d'où de légers écarts avec ces valeurs.</p>
+  <p class="small muted">Médianes benchstat mesurées étape par étape. Deux actions font l'essentiel : O2 (−66 %, le plateau le plus large du profil) puis O9 (−55 %). Le comparatif final (section 5) est refait dans une même session.</p>
 </section>
 
-<!-- ===================================================== 4. ÉCHECS + REPRO -->
+<!-- ===================================================== 4. CONCURRENCE, ÉCHECS, REPRO -->
 <section class="page">
-  <div class="runhead"><h2>4. Tentatives infructueuses et reproductibilité</h2><span>BarMash • Audit de performance</span></div>
+  <div class="runhead"><h2>4. Concurrence, tentatives infructueuses et reproductibilité</h2><span>BarMash • Audit de performance</span></div>
 
-  <div class="box ko">
+  <div class="two">
+    <div class="box note">
+      <h4>O9 — Pourquoi un changement de modèle</h4>
+      <p class="small" style="margin:0 0 4px">Dans la boucle naïve, le client <i>i</i> lit les positions déjà déplacées des clients précédents : chaque client dépend du précédent, ce qui empêche toute parallélisation exacte. La bousculade est donc calculée sur les positions de <b>début de tick</b> (phase 1, parallèle), puis la machine à états et le RNG s'exécutent dans l'ordre (phase 2).</p>
+      <ul class="small">
+        <li>Résultat identique avec 1, 3, 8 ou 16 workers (test dédié).</li>
+        <li>Écart d'observables après 5 000 ticks par rapport au naïf : bières −0,02 %, flaques −1,4 %, vomisseurs 217 contre 214.</li>
+        <li>Arrêt précoce : contexte annulé dès la déconnexion du navigateur ; Ctrl+C arrête le serveur et vide le dernier lot SQLite.</li>
+      </ul>
+    </div>
+    <div class="box note">
+      <h4>Dimensionnement du worker pool</h4>
+      <table>
+        <tr><th>Workers</th><th class="num">early</th><th class="num">rush</th></tr>
+        <tr><td>O8 (séquentiel)</td><td class="num">0,915 ms</td><td class="num">1,361 ms</td></tr>
+        <tr><td>1</td><td class="num loss">+4,5 %</td><td class="num loss">+7,8 %</td></tr>
+        <tr><td>2</td><td class="num gain">−34,0 %</td><td class="num gain">−10,1 %</td></tr>
+        <tr><td>4</td><td class="num gain">−51,1 %</td><td class="num gain">−42,9 %</td></tr>
+        <tr class="total"><td>8 (cœurs physiques)</td><td class="num">−54,2 %</td><td class="num">−55,1 %</td></tr>
+        <tr><td>16 (threads SMT)</td><td class="num gain">−56,8 %</td><td class="num gain">−57,6 %</td></tr>
+      </table>
+      <p class="small" style="margin:0">16 workers ne gagnent que 5,6 % de plus que 8, pour deux fois plus de threads : les deux threads SMT d'un cœur partagent ses unités flottantes. On garde 8 workers et on laisse les autres threads au réseau, au GC et à SQLite.</p>
+    </div>
+  </div>
+
+  <div class="box ko" style="margin-top:8px">
     <h4>Échec n°1 — Rejet par boîte englobante écrit avec <code>||</code> : +52 % de temps</h4>
     <table>
       <tr><th>Variante (scan de bousculade)</th><th class="num">early</th><th class="num">rush</th></tr>
@@ -176,48 +209,33 @@
       <tr><td><code>if math.Abs(ndx) &gt;= 22 { continue }</code></td><td class="num gain">1,14 ms (−19 %)</td><td class="num gain">1,60 ms</td></tr>
     </table>
     <ul>
-      <li><b>Hypothèse :</b> éviter la racine carrée sur les voisins lointains. Mesuré : 97 % des voisins sont éliminés dès le premier test.</li>
-      <li><b>Cause :</b> le premier saut dépend du <b>signe</b> de dx, qui est aléatoire. Le prédicteur de branchement se trompe une fois sur deux : 600 k voisins × 50 % × ~15 cycles de vidage du pipeline ≈ <b>0,9 ms</b>, soit exactement l'écart mesuré (+0,88 ms).</li>
-      <li><b>Correction :</b> <code>math.Abs</code> est un simple masque de bit, sans branchement. Il ne reste qu'un saut, juste dans 97 % des cas. La même condition logique coûte +60 % ou −19 % selon son écriture.</li>
+      <li><b>Cause :</b> le premier saut dépend du <b>signe</b> de dx, qui est aléatoire, et le prédicteur de branchement se trompe une fois sur deux. 600 k voisins × 50 % × ~15 cycles de vidage du pipeline ≈ <b>0,9 ms</b>, soit l'écart mesuré (+0,88 ms).</li>
+      <li><b>Correction :</b> <code>math.Abs</code> est un masque de bit sans branchement, qui ne laisse qu'un saut, juste dans 97 % des cas. La même condition coûte +60 % ou −19 % selon son écriture.</li>
     </ul>
   </div>
 
   <div class="two" style="margin-top:8px">
     <div class="box ko">
-      <h4>Échec n°2 — O1 : flaques par valeur (gain nul)</h4>
-      <ul>
-        <li>Hypothèse : les ~450 <code>*VomitPuddle</code> dispersés provoquent des défauts de cache.</li>
-        <li>Mesure : <span class="loss">+1,4 %</span> early, <span class="loss">+0,6 %</span> rush (p &lt; 0,01).</li>
-        <li>Cause : les flaques étaient allouées à la suite et tiennent en 18 Ko, donc dans le L1d (48 Ko). Le problème était le nombre de tests, réglé ensuite par O2.</li>
+      <h4>Échec n°2 — Paralléliser sans changer le modèle</h4>
+      <ul class="small">
+        <li>Seule la détection des flaques est parallélisable sans changer le résultat : ~10 % du tick.</li>
+        <li>Mesure (8 workers) : <span class="gain">−9,8 %</span> rush, mais <span class="loss">+5,0 %</span> early, où il n'y a aucune flaque et où l'on paie la synchronisation pour rien.</li>
+        <li>Amdahl : avec P ≈ 0,1, le gain est plafonné à 11 % même avec une infinité de cœurs. Abandonné au profit du modèle en deux phases.</li>
       </ul>
     </div>
     <div class="box ko">
-      <h4>Échec n°3 — O8 : struct de 80 o → 48 o (neutre)</h4>
-      <ul>
-        <li>Hypothèse : tenir clients + positions dans le L2.</li>
-        <li>Mesure : early p = 0,063, rush p = 0,481 → pas d'effet.</li>
-        <li>Cause : les clients sont lus <b>séquentiellement</b> ; le prefetcher suit le flux et l'ancien jeu (960 Ko) tenait déjà en L2. Conservé pour l'empreinte mémoire (−40 %).</li>
+      <h4>Échec n°3 — Optimisations mémoire sans effet CPU</h4>
+      <ul class="small">
+        <li><b>O1</b> (flaques par valeur) : +1,4 % / +0,6 %. Les flaques tenaient déjà en 18 Ko dans le L1d ; le vrai problème était le nombre de tests.</li>
+        <li><b>O8</b> (struct de 80 → 48 o) : p = 0,063 / 0,481. Les clients sont lus séquentiellement et le prefetcher suit le flux. Conservé pour l'empreinte mémoire (−40 %).</li>
       </ul>
     </div>
   </div>
 
-  <div class="box note" style="margin-top:8px">
-    <h4>Biais de mesure repéré : alignement du code</h4>
-    <p class="small" style="margin:0">Après O6, le tick early a pris +2,8 % alors que la boucle n'avait pas changé. Un A/B entrelacé des deux binaires confirme l'écart (p = 0,000), et la comparaison du code machine montre que seuls le padding (<code>NOP</code>) et un pas d'adresse ont bougé : la boucle chaude a été réalignée. C'est un effet de placement du code, pas un effet algorithmique. D'où la règle suivie ensuite : comparer en A/B entrelacé dès que l'écart attendu est sous ~5 %.</p>
-  </div>
-
   <h3>Reproduire la campagne en une commande</h3>
-<pre><span class="c"># Prérequis : Go 1.27, benchstat, hyperfine. Durée ~10 min.</span>
+<pre><span class="c"># Prérequis : Go 1.27, benchstat, hyperfine. Durée ~15 min. Résultats dans perf/campaign/</span>
 ./run_benchmarks.sh</pre>
-  <table>
-    <tr><th style="width:8%">Étape</th><th>Ce que fait le script</th><th style="width:34%">Sortie (<code>perf/campaign/</code>)</th></tr>
-    <tr><td>1–2</td><td>Reconstruit la baseline depuis git (<code>343a4ee</code>) dans un worktree et compile les deux binaires avec le même harnais headless</td><td><code>environment.txt</code></td></tr>
-    <tr><td>3</td><td>Tests : empreinte bit à bit et oracles d'équivalence</td><td><code>tests.txt</code></td></tr>
-    <tr><td>4</td><td>Benchmarks Go baseline et final dans la même session, puis benchstat</td><td><code>bench_*.txt</code>, <code>benchstat.txt</code></td></tr>
-    <tr><td>5</td><td>Hyperfine sur 5 000 ticks + vérification que l'état final est identique</td><td><code>hyperfine.json/.md</code>, <code>state_*.txt</code></td></tr>
-    <tr><td>6</td><td>Profils pprof CPU et allocations des deux versions</td><td><code>*_cpu.pprof</code>, <code>*_allocs.pprof</code></td></tr>
-  </table>
-  <p class="small muted">Historique complet : un commit par action, avec ses séries brutes dans <code>perf/bench/</code>. Les règles imposées aux assistants IA utilisés pendant le projet sont dans <code>constitution.md</code> à la racine du dépôt.</p>
+  <p class="small muted" style="margin:0">Le script reconstruit la baseline depuis git (<code>343a4ee</code>) avec le même harnais headless, lance les tests, les benchmarks des deux versions dans la même session (benchstat), la montée en charge des workers, les mesures I/O et les plans de requête, Hyperfine, puis les profils pprof. Un commit par lot d'optimisation, séries brutes dans <code>perf/bench/</code>. Règles imposées aux assistants IA : <code>constitution.md</code>.</p>
 </section>
 
 <!-- ===================================================== 5. SYNTHÈSE -->
@@ -225,47 +243,46 @@
   <div class="runhead"><h2>5. Synthèse et conclusion</h2><span>BarMash • Audit de performance</span></div>
 
   <div class="kpis">
-    <div class="kpi"><div class="v">×4,5</div><div class="l">Tick en croisière plus rapide</div></div>
-    <div class="kpi"><div class="v">×9,9</div><div class="l">Frame réseau plus rapide</div></div>
+    <div class="kpi"><div class="v">×10,4</div><div class="l">Tick en croisière plus rapide</div></div>
+    <div class="kpi"><div class="v">×41</div><div class="l">Frame réseau plus rapide</div></div>
+    <div class="kpi"><div class="v">−83 %</div><div class="l">d'octets envoyés au navigateur</div></div>
     <div class="kpi"><div class="v">0 alloc</div><div class="l">par tick et par frame</div></div>
-    <div class="kpi"><div class="v">528 → 4</div><div class="l">cycles GC en 25 s de service</div></div>
   </div>
 
   <h3>Baseline vs version finale</h3>
   <table>
-    <tr><th style="width:33%">Indicateur</th><th class="num">Baseline</th><th class="num">Finale</th><th class="num">Écart</th><th style="width:20%">Source</th></tr>
-    <tr><td>Tick, début de soirée (early)</td><td class="num">1,645 ms</td><td class="num">0,912 ms</td><td class="num gain">−44,5 %</td><td>benchstat n=10, p=0,000</td></tr>
-    <tr><td>Tick, croisière (rush)</td><td class="num">5,846 ms</td><td class="num">1,297 ms</td><td class="num gain">−77,8 % (×4,5)</td><td>benchstat n=10, p=0,000</td></tr>
-    <tr><td>Frame réseau (télémétrie + encodage)</td><td class="num">1,224 ms</td><td class="num">0,123 ms</td><td class="num gain">−89,9 % (×9,9)</td><td>benchstat n=10, p=0,000</td></tr>
-    <tr><td>Allocations par tick</td><td class="num">423 Ko • 3 385</td><td class="num">0 • 0</td><td class="num gain">−100 %</td><td>benchstat</td></tr>
-    <tr><td>Allocations par frame</td><td class="num">603 Ko • 7</td><td class="num">0 • 0</td><td class="num gain">−100 %</td><td>benchstat</td></tr>
-    <tr><td>5 000 ticks de bout en bout (moyenne ± σ)</td><td class="num">13,81 ± 0,09 s</td><td class="num">5,55 ± 0,02 s</td><td class="num gain">×2,49</td><td>Hyperfine, 3 warmup + 10 runs</td></tr>
-    <tr><td>GC sur 5 000 ticks • mémoire allouée cumulée</td><td class="num">697 cycles • 1 820 Mo</td><td class="num">0 cycle • 0,94 Mo</td><td class="num gain">−100 %</td><td>runtime/metrics (headless)</td></tr>
-    <tr><td>Serveur réel, 25 s : CPU consommé • cycles GC</td><td class="num">2 610 ms • 528</td><td class="num">840 ms • 4</td><td class="num gain">−68 %</td><td>pprof live + client WebSocket</td></tr>
-    <tr><td>Taille d'un client en mémoire</td><td class="num">96 o (via pointeur)</td><td class="num">48 o + 16 o (position)</td><td class="num gain">−33 %</td><td><code>unsafe.Sizeof</code></td></tr>
-    <tr class="total"><td>État de la simulation après 5 000 ticks</td><td class="num" colspan="2">6 052 sobres • 214 vomisseurs • 438 flaques • 141 838 bières</td><td class="num">identique</td><td>empreinte bit à bit</td></tr>
+    <tr><th style="width:31%">Indicateur</th><th class="num">Baseline</th><th class="num">Finale</th><th class="num">Écart</th><th style="width:19%">Source</th></tr>
+    <tr><td>Tick, début de soirée (early)</td><td class="num">1,539 ms</td><td class="num">0,389 ms</td><td class="num gain">−74,7 % (×4,0)</td><td>benchstat n=10</td></tr>
+    <tr><td>Tick, croisière (rush)</td><td class="num">5,934 ms</td><td class="num">0,569 ms</td><td class="num gain">−90,4 % (×10,4)</td><td>benchstat n=10</td></tr>
+    <tr><td>Frame réseau (télémétrie + encodage)</td><td class="num">1,185 ms (JSON)</td><td class="num">29,0 µs (binaire)</td><td class="num gain">−97,6 % (×41)</td><td>benchstat n=10</td></tr>
+    <tr><td>Taille d'une frame • débit à 30 frames/s</td><td class="num">360 Ko • 10,8 Mo/s</td><td class="num">61 Ko • 1,8 Mo/s</td><td class="num gain">−83 %</td><td>benchstat (bytes/frame)</td></tr>
+    <tr><td>Allocations par tick • par frame</td><td class="num">426 Ko • 574 Ko</td><td class="num">0 • 0</td><td class="num gain">−100 %</td><td>benchstat</td></tr>
+    <tr><td>5 000 ticks de bout en bout (moyenne ± σ)</td><td class="num">15,29 ± 1,00 s</td><td class="num">2,24 ± 0,02 s</td><td class="num gain">×6,8</td><td>Hyperfine, 3 + 10 runs</td></tr>
+    <tr><td>GC sur 5 000 ticks • mémoire allouée</td><td class="num">647 cycles • 1 820 Mo</td><td class="num">0 cycle • 1,12 Mo</td><td class="num gain">−100 %</td><td>runtime/metrics</td></tr>
+    <tr><td>Serveur réel, 25 s : CPU • cycles GC</td><td class="num">2 670 ms • 493</td><td class="num">990 ms • 2</td><td class="num gain">−63 %</td><td>pprof live + WebSocket</td></tr>
+    <tr><td>Taille d'un client en mémoire</td><td class="num">96 o (via pointeur)</td><td class="num">48 o + 16 o</td><td class="num gain">−33 %</td><td><code>unsafe.Sizeof</code></td></tr>
+    <tr class="total"><td>État après 5 000 ticks (bières • flaques)</td><td class="num">141 838 • 438</td><td class="num">141 809 • 432</td><td class="num">−0,02 % • −1,4 %</td><td>modèle en deux phases</td></tr>
   </table>
 
   <figure style="margin-top:4px">
     <div class="annot">
       <img src="img/flame_final.png" alt="Flamegraph CPU de la version finale">
-      <span class="badge" style="left:30%;top:53%">1</span>
-      <span class="badge" style="left:67%;top:73%">2</span>
-      <span class="badge" style="left:86.7%;top:80%">5</span>
-      <span class="note" style="left:72%;top:38%">plus de tour GC à droite</span>
+      <span class="badge" style="left:30%;top:41%">1</span>
+      <span class="badge" style="left:88%;top:53%">2</span>
+      <span class="badge" style="left:84%;top:73%">3</span>
     </div>
-    <figcaption>Figure 2 — Flamegraph CPU de la version finale, sur les mêmes 5 000 ticks (total 5,31 s contre 14,42 s). Repères : (1) bousculade, qui reste le premier poste ; (2) <code>math.Sincos</code> (12,4 %) ; (5) <code>probePuddles</code>, le scan des flaques via l'index (7,5 % contre 39,5 %). Plus aucune tour du GC.</figcaption>
+    <figcaption>Figure 2 — Flamegraph CPU de la version finale sur les mêmes 5 000 ticks : 4,50 s de CPU cumulé pour 2,18 s de temps réel (contre 15,23 s). Repères : (1) phase parallèle dans les workers, <code>computeForces</code> (63 %) ; (2) phase séquentielle (34 %) ; (3) <code>math.Sincos</code> (17 %), premier poste de la partie séquentielle, qui borne désormais le gain (Amdahl). Plus aucune tour du GC.</figcaption>
   </figure>
 
   <h3>Conclusion</h3>
   <div class="two">
     <div>
-      <p><b>Action la plus rentable : O2</b>, l'index des flaques. À elle seule, elle divise le tick de croisière par 2,95. C'est aussi celle que le profil désignait le plus clairement. Côté réseau, l'encodeur manuel (O6 + O6b) divise le coût d'une frame par près de 10.</p>
-      <p><b>Accent mis :</b> d'abord le <b>CPU</b> (algorithmique, puis branchements et racines carrées), puis la <b>mémoire / GC</b> (zéro allocation, flaques et clients sans pointeurs, −40 % sur la struct client). Le serveur tient ses 30 ticks/s avec une marge énorme : 1,3 ms utilisées sur 33,3 ms de budget.</p>
+      <p><b>Actions les plus rentables :</b> l'index des flaques (O2), qui divise à lui seul le tick de croisière par 2,95, puis le tick en deux phases sur 8 workers (O9), qui le divise encore par 2,2. Côté réseau, la frame binaire coûte 41 fois moins cher à produire que le JSON d'origine, pour six fois moins d'octets.</p>
+      <p><b>Accent mis :</b> d'abord le <b>CPU</b> (algorithme, branchements, racines carrées, parallélisme), puis la <b>mémoire et le GC</b> (zéro allocation, données sans pointeurs), enfin les <b>I/O</b> (octets envoyés, base indexée, écritures groupées et asynchrones). Le tick tient en 0,569 ms sur un budget de 33,3 ms.</p>
     </div>
     <div>
-      <p><b>Ce qui n'a pas marché :</b> l'erreur la plus instructive est le rejet par boîte englobante écrit avec <code>||</code>. Une optimisation « évidente » sur le papier a ralenti le tick de 52 % à cause du prédicteur de branchement. Les deux optimisations purement mémoire (O1, O8) n'ont rien apporté au CPU : dans ce projet, les données tenaient déjà en cache.</p>
-      <p><b>Suite :</b> la concurrence n'a pas été traitée. Paralléliser la boucle impose de séparer une phase de lecture (forces, flaques) d'une phase d'écriture pour garder le déterminisme du RNG. Un format binaire pour la frame (~360 Ko de JSON aujourd'hui) réduirait aussi la bande passante réseau.</p>
+      <p><b>Ce qui n'a pas marché :</b> le rejet par boîte englobante écrit avec <code>||</code>. Une optimisation évidente sur le papier a ralenti le tick de 52 % à cause du prédicteur de branchement. Paralléliser sans toucher au modèle n'aurait rapporté que 10 % au mieux (loi d'Amdahl), et les optimisations purement mémoire (O1, O8) n'ont rien apporté au CPU : les données tenaient déjà en cache.</p>
+      <p><b>Limites :</b> la parallélisation change légèrement la dynamique de la simulation (écart chiffré ci-dessus), un choix assumé et testé. Le détecteur de data races (<code>go test -race</code>) demande cgo et n'a pas pu être lancé sous Windows ; il est à passer en CI Linux.</p>
     </div>
   </div>
 </section>

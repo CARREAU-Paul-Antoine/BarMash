@@ -4,29 +4,34 @@ pkg: barmash
 cpu: AMD Ryzen 7 9700X 8-Core Processor             
                                 │ C:/Users/paula/Documents/sup/BarMash/perf/campaign/bench_baseline.txt │ C:/Users/paula/Documents/sup/BarMash/perf/campaign/bench_final.txt │
                                 │                                sec/op                                 │                   sec/op                    vs base                │
-UpdateSimulation/phase=early-16                                                            1644.8µ ± 5%                                  912.2µ ± 2%  -44.54% (p=0.000 n=10)
-UpdateSimulation/phase=rush-16                                                              5.846m ± 2%                                  1.297m ± 2%  -77.82% (p=0.000 n=10)
-BuildFrame-16                                                                              1224.1µ ± 4%                                  123.3µ ± 1%  -89.93% (p=0.000 n=10)
-geomean                                                                                     2.275m                                       526.4µ       -76.86%
+UpdateSimulation/phase=early-16                                                            1539.3µ ± 5%                                  389.2µ ± 1%  -74.72% (p=0.000 n=10)
+UpdateSimulation/phase=rush-16                                                             5934.0µ ± 3%                                  568.8µ ± 0%  -90.41% (p=0.000 n=10)
+BuildFrame-16                                                                              1184.9µ ± 3%                                  130.0µ ± 1%  -89.03% (p=0.000 n=10)
+BuildFrameBinary-16                                                                                                                      29.03µ ± 2%
+geomean                                                                                     2.212m                                       170.0µ       -86.15%
 
                                 │ C:/Users/paula/Documents/sup/BarMash/perf/campaign/bench_baseline.txt │ C:/Users/paula/Documents/sup/BarMash/perf/campaign/bench_final.txt │
                                 │                                 B/op                                  │                 B/op                   vs base                     │
-UpdateSimulation/phase=early-16                                                            423.2Ki ± 2%                              0.0Ki ± 0%  -100.00% (p=0.000 n=10)
+UpdateSimulation/phase=early-16                                                            425.6Ki ± 1%                              0.0Ki ± 0%  -100.00% (p=0.000 n=10)
 UpdateSimulation/phase=rush-16                                                             418.8Ki ± 0%                              0.0Ki ± 0%  -100.00% (p=0.000 n=10)
-BuildFrame-16                                                                              602.8Ki ± 4%                              0.0Ki ± 0%  -100.00% (p=0.000 n=10)
-geomean                                                                                    474.5Ki                                               ?                       ¹ ²
+BuildFrame-16                                                                              573.6Ki ± 3%                              0.0Ki ± 0%  -100.00% (p=0.000 n=10)
+BuildFrameBinary-16                                                                                                                  0.000 ± 0%
+geomean                                                                                    467.6Ki                                               ?                       ¹ ²
 ¹ summaries must be >0 to compute geomean
 ² ratios must be >0 to compute geomean
 
                                 │ C:/Users/paula/Documents/sup/BarMash/perf/campaign/bench_baseline.txt │ C:/Users/paula/Documents/sup/BarMash/perf/campaign/bench_final.txt │
                                 │                               allocs/op                               │               allocs/op                vs base                     │
-UpdateSimulation/phase=early-16                                                            3.385k ±  2%                             0.000k ± 0%  -100.00% (p=0.000 n=10)
-UpdateSimulation/phase=rush-16                                                             3.307k ±  0%                             0.000k ± 0%  -100.00% (p=0.000 n=10)
-BuildFrame-16                                                                               7.000 ± 14%                              0.000 ± 0%  -100.00% (p=0.000 n=10)
-geomean                                                                                     427.9                                                ?                       ¹ ²
+UpdateSimulation/phase=early-16                                                             3.405k ± 1%                             0.000k ± 0%  -100.00% (p=0.000 n=10)
+UpdateSimulation/phase=rush-16                                                              3.307k ± 0%                             0.000k ± 0%  -100.00% (p=0.000 n=10)
+BuildFrame-16                                                                                6.000 ± 0%                              0.000 ± 0%  -100.00% (p=0.000 n=10)
+BuildFrameBinary-16                                                                                                                  0.000 ± 0%
+geomean                                                                                      407.3                                               ?                       ¹ ²
 ¹ summaries must be >0 to compute geomean
 ² ratios must be >0 to compute geomean
 
-              │ C:/Users/paula/Documents/sup/BarMash/perf/campaign/bench_baseline.txt │ C:/Users/paula/Documents/sup/BarMash/perf/campaign/bench_final.txt │
-              │                              bytes/frame                              │                 bytes/frame                  vs base               │
-BuildFrame-16                                                            360.0Ki ± 0%                                  360.0Ki ± 0%  -0.00% (p=0.000 n=10)
+                    │ C:/Users/paula/Documents/sup/BarMash/perf/campaign/bench_baseline.txt │ C:/Users/paula/Documents/sup/BarMash/perf/campaign/bench_final.txt │
+                    │                              bytes/frame                              │                 bytes/frame                  vs base               │
+BuildFrame-16                                                                  360.0Ki ± 0%                                  359.6Ki ± 0%  -0.12% (p=0.000 n=10)
+BuildFrameBinary-16                                                                                                          61.20Ki ± 0%
+geomean                                                                        360.0Ki                                       148.3Ki       -0.12%

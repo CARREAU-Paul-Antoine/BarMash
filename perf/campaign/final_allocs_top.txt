@@ -1,17 +1,17 @@
 File: barmash_final.exe
-Build ID: C:\Users\paula\Documents\sup\BarMash\bin\barmash_final.exe2026-10-18 18:04:09.6157446 +0200 CEST
+Build ID: C:\Users\paula\Documents\sup\BarMash\bin\barmash_final.exe2026-10-18 19:14:21.0093461 +0200 CEST
 Type: alloc_space
-Time: 2026-10-18 18:11:00 CEST
-Showing nodes accounting for 6864.22kB, 93.06% of 7376.23kB total
-Showing top 10 nodes out of 58
+Time: 2026-10-18 19:25:40 CEST
+Showing nodes accounting for 7725.19kB, 100% of 7725.19kB total
+Showing top 10 nodes out of 31
       flat  flat%   sum%        cum   cum%
- 1184.27kB 16.06% 16.06%  1184.27kB 16.06%  runtime/pprof.StartCPUProfile
-    1026kB 13.91% 29.96%     1026kB 13.91%  runtime.mallocgc
-  783.76kB 10.63% 40.59%   783.76kB 10.63%  main.initSimulation
-  688.56kB  9.33% 49.93%   688.56kB  9.33%  compress/flate.(*fastGen).addBlock
-  583.01kB  7.90% 57.83%   583.01kB  7.90%  compress/flate.newFastEnc (inline)
-  544.67kB  7.38% 65.21%  1127.67kB 15.29%  compress/flate.(*compressor).init
-  514.63kB  6.98% 72.19%   514.63kB  6.98%  vendor/golang.org/x/net/http2/hpack.init
-  514.38kB  6.97% 79.16%   514.38kB  6.97%  runtime/pprof.(*profMap).lookup
-  512.88kB  6.95% 86.12%   512.88kB  6.95%  runtime/pprof.(*profileBuilder).emitLocation
-  512.08kB  6.94% 93.06%   512.08kB  6.94%  compress/gzip.NewWriterLevel
+    2565kB 33.20% 33.20%     2565kB 33.20%  runtime.mallocgc
+ 1379.92kB 17.86% 51.07%  1379.92kB 17.86%  main.initSimulation
+ 1184.27kB 15.33% 66.40%  1184.27kB 15.33%  runtime/pprof.StartCPUProfile
+  544.67kB  7.05% 73.45%   544.67kB  7.05%  compress/flate.(*compressor).init
+  515.19kB  6.67% 80.12%   515.19kB  6.67%  unicode.map.init.2
+  512.08kB  6.63% 86.74%   512.08kB  6.63%  compress/gzip.NewWriterLevel
+  512.05kB  6.63% 93.37%   512.05kB  6.63%  main.(*forcePool).worker
+  512.01kB  6.63%   100%   512.01kB  6.63%  runtime/pprof.(*profileBuilder).emitLocation
+         0     0%   100%   544.67kB  7.05%  compress/flate.NewWriter (inline)
+         0     0%   100%   544.67kB  7.05%  compress/gzip.(*Writer).Write

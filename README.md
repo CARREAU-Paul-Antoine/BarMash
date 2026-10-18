@@ -5,7 +5,7 @@ Moteur de simulation spatiale en temps réel modélisant une soirée festive à 
 > **Objectif Pédagogique (Sup de Vinci - RNCP Bloc 4 Backend) :**  
 > Le projet part d'une **version naïve** (commit `343a4ee`), délibérément conçue avec des anti-patterns de conception mémoire (allocations dynamiques systématiques sur le Tas, pointeurs dispersés, scans $\mathcal{O}(N^2)$). Il l'optimise ensuite étape par étape : chaque gain est prouvé par `benchstat`, et chaque étape est validée par un checksum bit à bit de l'état de la simulation (aucune régression logique).
 >
-> **Résultat :** tick de croisière **5,54 ms → 1,36 ms (×4,1)**, frame réseau **1,09 ms → 0,13 ms (×8,4)**, **0 allocation** par tick et par frame, 528 → 4 cycles de GC en 25 s de service réel. Détail dans [docs/PLAN_OPTIMISATION.md](docs/PLAN_OPTIMISATION.md).
+> **Résultat :** tick de croisière **5,93 ms → 0,57 ms (×10,4)**, frame réseau **1,19 ms → 29 µs (×41)** et **360 → 61 Ko**, **0 allocation** par tick et par frame, 493 → 2 cycles de GC en 25 s de service réel. Rapport complet : [docs/RAPPORT_AUDIT.pdf](docs/RAPPORT_AUDIT.pdf) ; détail par étape : [docs/PLAN_OPTIMISATION.md](docs/PLAN_OPTIMISATION.md).
 
 ---
 
@@ -46,10 +46,14 @@ Moteur de simulation spatiale en temps réel modélisant une soirée festive à 
 ├── simulation.go           # Moteur : état, initialisation, boucle de tick, statistiques
 ├── puddle_index.go         # O2 : index spatial CSR des flaques
 ├── bar_lut.go              # O7 : table de Voronoï certifiée du bar le plus proche
-├── frame.go                # O6 : encodeur de frame append-only (octet-identique à encoding/json)
+├── workers.go              # O9 : phase parallèle du tick sur un worker pool borné
+├── frame.go                # O6 : encodeur de frame JSON append-only (octet-identique à encoding/json)
+├── binary_frame.go         # O10 : frame binaire (6 o par client), format par défaut
+├── store.go                # O11 : historique SQLite (écriture asynchrone par lots, index, /api/history)
 ├── headless.go             # Mode sans serveur (BARMASH_TICKS=N) pour Hyperfine et les profils
-├── protocol_test.go        # Checksum de référence, scénarios early/rush, benchmarks
+├── protocol_test.go        # Empreinte de référence, invariance au nombre de workers, benchmarks
 ├── equivalence_test.go     # Chaque optimisation comparée à son implémentation naïve
+├── io_test.go              # Frame binaire, plans de requête SQLite, benchmarks I/O
 ├── main_test.go            # Micro-benchmarks de localité (Séance 2)
 ├── run_benchmarks.sh       # Campagne complète baseline vs final en une commande
 ├── constitution.md         # Garde-fous d'ingénierie imposés aux assistants IA
@@ -78,7 +82,7 @@ Moteur de simulation spatiale en temps réel modélisant une soirée festive à 
 ```bash
 go run .
 ```
-Puis ouvrir **[http://localhost:8080](http://localhost:8080)**. Le profiling pprof est exposé uniquement sur **http://localhost:6060/debug/pprof/**.
+Puis ouvrir **[http://localhost:8080](http://localhost:8080)** (frames binaires ; `ws://localhost:8080/ws?format=json` pour l'ancien format JSON). L'historique de télémétrie est enregistré dans `data/barmash.db` et consultable via `GET /api/history?session=<id>&from=<tick>&to=<tick>`. Le profiling pprof est exposé uniquement sur **http://localhost:6060/debug/pprof/**. Nombre de workers : `BARMASH_WORKERS` (défaut : cœurs physiques).
 
 ---
 

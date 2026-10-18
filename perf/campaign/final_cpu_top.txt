@@ -1,24 +1,24 @@
 File: barmash_final.exe
-Build ID: C:\Users\paula\Documents\sup\BarMash\bin\barmash_final.exe2026-10-18 18:04:09.6157446 +0200 CEST
+Build ID: C:\Users\paula\Documents\sup\BarMash\bin\barmash_final.exe2026-10-18 19:14:21.0093461 +0200 CEST
 Type: cpu
-Time: 2026-10-18 18:10:54 CEST
-Duration: 5.54s, Total samples = 5.31s (95.86%)
-Showing nodes accounting for 5.24s, 98.68% of 5.31s total
-Dropped 36 nodes (cum <= 0.03s)
-Showing top 15 nodes out of 20
+Time: 2026-10-18 19:25:38 CEST
+Duration: 2.18s, Total samples = 4.50s (206.49%)
+Showing nodes accounting for 4.38s, 97.33% of 4.50s total
+Dropped 42 nodes (cum <= 0.02s)
+Showing top 15 nodes out of 32
       flat  flat%   sum%        cum   cum%
-     3.23s 60.83% 60.83%      5.29s 99.62%  main.updateSimulation
-     0.66s 12.43% 73.26%      0.70s 13.18%  math.Sincos
-     0.21s  3.95% 77.21%      0.21s  3.95%  main.probePuddle (inline)
-     0.21s  3.95% 81.17%      0.21s  3.95%  math.Float64frombits (inline)
-     0.16s  3.01% 84.18%      0.40s  7.53%  main.probePuddles
-     0.16s  3.01% 87.19%      0.50s  9.42%  math.Abs (inline)
-     0.15s  2.82% 90.02%      0.16s  3.01%  main.nearestBar
-     0.13s  2.45% 92.47%      0.13s  2.45%  math.Float64bits (inline)
-     0.11s  2.07% 94.54%      0.21s  3.95%  math/rand.(*Rand).Float64 (inline)
-     0.06s  1.13% 95.67%      0.06s  1.13%  math/rand.(*rngSource).Uint64 (inline)
-     0.05s  0.94% 96.61%      0.08s  1.51%  math.Max (inline)
-     0.03s  0.56% 97.18%      0.03s  0.56%  main.puddleCell (inline)
-     0.03s  0.56% 97.74%      0.03s  0.56%  math.archMax
-     0.03s  0.56% 98.31%      0.09s  1.69%  math/rand.(*rngSource).Int63
-     0.02s  0.38% 98.68%      0.03s  0.56%  math.IsInf (inline)
+     1.97s 43.78% 43.78%      2.83s 62.89%  main.computeForces
+     0.71s 15.78% 59.56%      0.77s 17.11%  math.Sincos
+     0.54s 12.00% 71.56%      1.52s 33.78%  main.updateSimulation
+     0.30s  6.67% 78.22%      0.30s  6.67%  math.Float64frombits (inline)
+     0.24s  5.33% 83.56%      0.45s 10.00%  main.probeIndexedPuddles
+     0.20s  4.44% 88.00%      0.20s  4.44%  main.probePuddle (inline)
+     0.14s  3.11% 91.11%      0.14s  3.11%  math.Float64bits (inline)
+     0.08s  1.78% 92.89%      0.08s  1.78%  main.nearestBar
+     0.07s  1.56% 94.44%      0.07s  1.56%  runtime.semawakeup
+     0.06s  1.33% 95.78%      0.06s  1.33%  math.archMax
+     0.02s  0.44% 96.22%      0.05s  1.11%  math.IsInf (inline)
+     0.02s  0.44% 96.67%      0.03s  0.67%  math/rand.(*rngSource).Int63
+     0.01s  0.22% 96.89%      2.84s 63.11%  main.(*forcePool).drain
+     0.01s  0.22% 97.11%      0.07s  1.56%  math.Max (inline)
+     0.01s  0.22% 97.33%      0.03s  0.67%  runtime.chanrecv

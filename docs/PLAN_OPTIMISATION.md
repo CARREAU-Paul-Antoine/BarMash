@@ -66,7 +66,11 @@ Toutes les étapes conservent le checksum de référence `0xaa36b4f0b73c614c` (�
 | O6 Encodeur append-only + `runtime/metrics` | `4812ed8` | (+2,8 %)¹ | (+1,8 %)¹ | **−66,5 %** | 0 B/frame |
 | O6b Table décimale | `414297b` | ~ | ~ | **−60,5 %** | |
 | O7 Table de Voronoï certifiée | `f54df13` | −8,9 % | −6,2 % | ~² | Plafond d'Amdahl : 11,5 % |
-| **Total** | | **0,921 ms (−37 %)** | **1,358 ms (−75 %, ×4,1)** | **0,130 ms (−88 %, ×8,4)** | **0 alloc** |
+| O8 Compactage de `Client` (80 → 48 o) | `c436637` | ~ | ~ | — | **Neutre** CPU, −40 % mémoire |
+| O9 Tick en deux phases, 8 workers | `a67b4a6` | −54,2 % | −55,1 % | — | Nouveau modèle, invariant au nombre de workers |
+| O10 Frame binaire | `a81b614` | — | — | −78 % (360 → 61 Ko) | |
+| O11 SQLite (lots, index, `sync.Pool`) | `a81b614` | — | — | — | Insertion ×10, requête ×40 |
+| **Total (campagne finale)** | | **0,389 ms (−75 %)** | **0,569 ms (−90 %, ×10,4)** | **29 µs (−98 %, ×41)** | **0 alloc** |
 
 ¹ `updateSimulation` est inchangé. Un A/B entrelacé (`perf/bench/ab_*_interleaved.txt`, +2,8 %, p=0,000) et la comparaison du code machine montrent que seuls le pas des flaques (48 → 40 o) et le padding `NOP` diffèrent : c'est un **biais d'alignement du code**, pas un effet algorithmique.
 ² −18,7 % mesuré sur un code non modifié : variance inter-séries de `BuildFrame` (±4 à 12 %).

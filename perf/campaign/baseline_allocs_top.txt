@@ -1,12 +1,12 @@
 File: barmash_baseline.exe
-Build ID: C:\Users\paula\Documents\sup\BarMash\bin\barmash_baseline.exe2026-10-18 18:04:08.3125687 +0200 CEST
+Build ID: C:\Users\paula\Documents\sup\BarMash\bin\barmash_baseline.exe2026-10-18 19:14:19.5087846 +0200 CEST
 Type: alloc_space
-Time: 2026-10-18 18:10:53 CEST
-Showing nodes accounting for 1.76GB, 99.74% of 1.77GB total
-Dropped 46 nodes (cum <= 0.01GB)
+Time: 2026-10-18 19:25:32 CEST
+Showing nodes accounting for 1.79GB, 99.66% of 1.79GB total
+Dropped 36 nodes (cum <= 0.01GB)
       flat  flat%   sum%        cum   cum%
-    1.76GB 99.74% 99.74%     1.76GB 99.74%  main.updateSimulation
-         0     0% 99.74%     1.76GB 99.83%  main.init.0
-         0     0% 99.74%     1.76GB 99.83%  runtime.doInit (inline)
-         0     0% 99.74%     1.76GB 99.83%  runtime.doInit1
-         0     0% 99.74%     1.76GB 99.83%  runtime.main
+    1.79GB 99.66% 99.66%     1.79GB 99.66%  main.updateSimulation
+         0     0% 99.66%     1.79GB 99.86%  main.init.0
+         0     0% 99.66%     1.79GB 99.86%  runtime.doInit (inline)
+         0     0% 99.66%     1.79GB 99.86%  runtime.doInit1
+         0     0% 99.66%     1.79GB 99.86%  runtime.main

@@ -1,24 +1,24 @@
 File: barmash_baseline.exe
-Build ID: C:\Users\paula\Documents\sup\BarMash\bin\barmash_baseline.exe2026-10-18 18:04:08.3125687 +0200 CEST
+Build ID: C:\Users\paula\Documents\sup\BarMash\bin\barmash_baseline.exe2026-10-18 19:14:19.5087846 +0200 CEST
 Type: cpu
-Time: 2026-10-18 18:10:39 CEST
-Duration: 13.97s, Total samples = 14.42s (103.20%)
-Showing nodes accounting for 13.49s, 93.55% of 14.42s total
-Dropped 120 nodes (cum <= 0.07s)
-Showing top 15 nodes out of 59
+Time: 2026-10-18 19:25:18 CEST
+Duration: 14.54s, Total samples = 15.23s (104.78%)
+Showing nodes accounting for 14.26s, 93.63% of 15.23s total
+Dropped 100 nodes (cum <= 0.08s)
+Showing top 15 nodes out of 60
       flat  flat%   sum%        cum   cum%
-    11.59s 80.37% 80.37%     12.88s 89.32%  main.updateSimulation
-     0.43s  2.98% 83.36%      0.44s  3.05%  math.cos
-     0.27s  1.87% 85.23%      0.30s  2.08%  runtime.preemptM
-     0.23s  1.60% 86.82%      0.25s  1.73%  math.sin
-     0.21s  1.46% 88.28%      0.30s  2.08%  runtime.lock2
-     0.18s  1.25% 89.53%      0.18s  1.25%  runtime.semawakeup
-     0.15s  1.04% 90.57%      0.20s  1.39%  runtime.unlock2
-     0.11s  0.76% 91.33%      0.11s  0.76%  math.archMax
-     0.09s  0.62% 91.96%      0.09s  0.62%  runtime.sysUsedOS
-     0.08s  0.55% 92.51%      0.08s  0.55%  math/rand.(*rngSource).Uint64 (inline)
-     0.05s  0.35% 92.86%      0.14s  0.97%  math/rand.(*Rand).Float64 (inline)
-     0.04s  0.28% 93.13%      0.15s  1.04%  math.Max (inline)
-     0.03s  0.21% 93.34%      0.16s  1.11%  runtime.scanObject
-     0.02s  0.14% 93.48%      0.26s  1.80%  runtime.mallocgc
-     0.01s 0.069% 93.55%      0.09s  0.62%  math/rand.(*Rand).Int63 (inline)
+    12.06s 79.19% 79.19%     13.67s 89.76%  main.updateSimulation
+     0.54s  3.55% 82.73%      0.60s  3.94%  math.cos
+     0.26s  1.71% 84.44%      0.26s  1.71%  runtime.preemptM
+     0.24s  1.58% 86.01%      0.33s  2.17%  runtime.lock2
+     0.24s  1.58% 87.59%      0.27s  1.77%  runtime.unlock2
+     0.22s  1.44% 89.03%      0.23s  1.51%  math.sin
+     0.19s  1.25% 90.28%      0.19s  1.25%  runtime.semawakeup
+     0.13s  0.85% 91.14%      0.13s  0.85%  runtime.sysUnusedOS
+     0.12s  0.79% 91.92%      0.12s  0.79%  math/rand.(*rngSource).Uint64 (inline)
+     0.07s  0.46% 92.38%      0.21s  1.38%  math/rand.(*Rand).Int63 (inline)
+     0.06s  0.39% 92.78%      0.10s  0.66%  runtime.gcmarknewobject
+     0.05s  0.33% 93.11%      0.12s  0.79%  math.Max (inline)
+     0.03s   0.2% 93.30%      0.35s  2.30%  runtime.makeslice
+     0.03s   0.2% 93.50%      0.32s  2.10%  runtime.mallocgc
+     0.02s  0.13% 93.63%      0.14s  0.92%  math/rand.(*rngSource).Int63

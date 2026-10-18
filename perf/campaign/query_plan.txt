@@ -1,0 +1,2 @@
+    io_test.go:123: index=false : SCAN telemetry | USE TEMP B-TREE FOR ORDER BY
+    io_test.go:123: index=true : SEARCH telemetry USING INDEX idx_telemetry_session_tick (session_id=? AND tick>? AND tick<?)
