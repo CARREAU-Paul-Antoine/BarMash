@@ -54,6 +54,8 @@ body {
   display: flex; justify-content: space-between; font-size: 8.5pt; color: var(--ink-2);
 }
 .cover .footer b { color: var(--ink); }
+.cover .footer a { color: var(--accent); text-decoration: none; }
+.cover .footer span:last-child { align-self: flex-end; }
 
 /* ---------- Corps ---------- */
 .runhead {

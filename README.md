@@ -5,7 +5,7 @@ Moteur de simulation spatiale en temps réel modélisant une soirée festive à 
 > **Objectif Pédagogique (Sup de Vinci - RNCP Bloc 4 Backend) :**  
 > Le projet part d'une **version naïve** (commit `343a4ee`), délibérément conçue avec des anti-patterns de conception mémoire (allocations dynamiques systématiques sur le Tas, pointeurs dispersés, scans $\mathcal{O}(N^2)$). Il l'optimise ensuite étape par étape : chaque gain est prouvé par `benchstat`, et chaque étape est validée par un checksum bit à bit de l'état de la simulation (aucune régression logique).
 >
-> **Résultat :** tick de croisière **5,93 ms → 0,57 ms (×10,4)**, frame réseau **1,19 ms → 29 µs (×41)** et **360 → 61 Ko**, **0 allocation** par tick et par frame, 493 → 2 cycles de GC en 25 s de service réel. Rapport complet : [docs/RAPPORT_AUDIT.pdf](docs/RAPPORT_AUDIT.pdf) ; détail par étape : [docs/PLAN_OPTIMISATION.md](docs/PLAN_OPTIMISATION.md).
+> **Résultat :** tick de croisière **5,93 ms → 0,57 ms (×10,4)**, frame réseau **1,19 ms → 29 µs (×41)** et **360 → 61 Ko**, **0 allocation** par tick et par frame, 493 → 2 cycles de GC en 25 s de service réel. Rapport complet : [docs/Paul-Antoine-CARREAU_RAPPORT_AUDIT.pdf](docs/Paul-Antoine-CARREAU_RAPPORT_AUDIT.pdf) ; détail par étape : [docs/PLAN_OPTIMISATION.md](docs/PLAN_OPTIMISATION.md).
 
 ---
 
@@ -62,7 +62,7 @@ Moteur de simulation spatiale en temps réel modélisant une soirée festive à 
 ├── docs/
 │   ├── AUDIT_SEANCE_1.md   # Audit initial de la version naïve
 │   ├── PLAN_OPTIMISATION.md # Diagnostic, feuille de route, résultats et échecs constructifs
-│   └── RAPPORT_AUDIT.pdf   # Rapport d'audit final
+│   └── Paul-Antoine-CARREAU_RAPPORT_AUDIT.pdf # Rapport d'audit final
 └── perf/
     ├── bench/              # Séries brutes (n=10) et comparaisons benchstat de chaque étape
     ├── campaign/           # Dernière campagne run_benchmarks.sh (benchstat, Hyperfine, pprof)
