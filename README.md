@@ -5,7 +5,7 @@ Moteur de simulation spatiale en temps réel modélisant une soirée festive à 
 > **Objectif Pédagogique (Sup de Vinci - RNCP Bloc 4 Backend) :**  
 > Le projet part d'une **version naïve** (commit `343a4ee`), délibérément conçue avec des anti-patterns de conception mémoire (allocations dynamiques systématiques sur le Tas, pointeurs dispersés, scans $\mathcal{O}(N^2)$). Il l'optimise ensuite étape par étape : chaque gain est prouvé par `benchstat`, et chaque étape est validée par un checksum bit à bit de l'état de la simulation (aucune régression logique).
 >
-> **Résultat :** tick de croisière **5,54 ms → 1,36 ms (×4,1)**, frame réseau **1,09 ms → 0,13 ms (×8,4)**, **0 allocation** par tick et par frame, 528 → 4 cycles de GC en 25 s de service réel. Détail dans [PLAN_OPTIMISATION.md](PLAN_OPTIMISATION.md).
+> **Résultat :** tick de croisière **5,54 ms → 1,36 ms (×4,1)**, frame réseau **1,09 ms → 0,13 ms (×8,4)**, **0 allocation** par tick et par frame, 528 → 4 cycles de GC en 25 s de service réel. Détail dans [docs/PLAN_OPTIMISATION.md](docs/PLAN_OPTIMISATION.md).
 
 ---
 
@@ -42,18 +42,23 @@ Moteur de simulation spatiale en temps réel modélisant une soirée festive à 
 ## 3. Structure du Projet
 
 ```text
-├── main.go               # Moteur de simulation, boucle de tick, serveur HTTP/WebSocket, pprof isolé
-├── puddle_index.go       # O2 : index spatial CSR des flaques
-├── bar_lut.go            # O7 : table de Voronoï certifiée du bar le plus proche
-├── frame.go              # O6 : encodeur de frame append-only (octet-identique à encoding/json)
-├── protocol_test.go      # Checksum de référence, scénarios early/rush, benchmarks
-├── *_test.go             # Tests d'équivalence (oracles naïfs) + micro-benchmarks Séance 2
-├── bench/                # Séries brutes (n=10) et comparaisons benchstat de chaque étape
-├── profiles/             # Profils pprof (CPU benchmark et live)
-├── PLAN_OPTIMISATION.md  # Diagnostic, feuille de route, résultats et échecs constructifs
-├── constitution.md       # Garde-fous d'ingénierie imposés aux assistants IA
-├── Makefile              # Commandes de reproductibilité
-└── index.html            # Interface web Canvas 2D temps réel avec HUD télémétrique
+├── main.go                 # Serveur HTTP/WebSocket, envoi des frames, pprof isolé
+├── simulation.go           # Moteur : état, initialisation, boucle de tick, statistiques
+├── puddle_index.go         # O2 : index spatial CSR des flaques
+├── bar_lut.go              # O7 : table de Voronoï certifiée du bar le plus proche
+├── frame.go                # O6 : encodeur de frame append-only (octet-identique à encoding/json)
+├── protocol_test.go        # Checksum de référence, scénarios early/rush, benchmarks
+├── *_test.go               # Tests d'équivalence (oracles naïfs) + micro-benchmarks Séance 2
+├── web/
+│   └── index.html          # Interface web Canvas 2D temps réel avec HUD télémétrique
+├── docs/
+│   ├── AUDIT_SEANCE_1.md   # Audit initial de la version naïve
+│   └── PLAN_OPTIMISATION.md # Diagnostic, feuille de route, résultats et échecs constructifs
+├── perf/
+│   ├── bench/              # Séries brutes (n=10) et comparaisons benchstat de chaque étape
+│   └── profiles/           # Profils pprof (CPU benchmark et live)
+├── constitution.md         # Garde-fous d'ingénierie imposés aux assistants IA
+└── Makefile                # Commandes de reproductibilité
 ```
 
 ---
@@ -83,8 +88,8 @@ go test -run TestGoldenChecksum -v .
 go test -v .
 
 # Benchmarks d'un tick (early = début de soirée, rush = ~450 flaques) et d'une frame réseau
-go test -run XXX -bench 'UpdateSimulation|BuildFrame' -benchmem -count=10 . > bench/new.txt
-benchstat bench/00_baseline.txt bench/new.txt
+go test -run XXX -bench 'UpdateSimulation|BuildFrame' -benchmem -count=10 . > perf/bench/new.txt
+benchstat perf/bench/00_baseline.txt perf/bench/new.txt
 
 # Profil CPU du scénario de croisière + flamegraph
 go test -run XXX -bench 'UpdateSimulation/phase=rush' -cpuprofile cpu.pprof .

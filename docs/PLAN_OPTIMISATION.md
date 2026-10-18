@@ -5,7 +5,7 @@
 
 ---
 
-## 1. Diagnostic de départ (profil CPU `phase=rush`, `profiles/00_cpu_rush.pprof`)
+## 1. Diagnostic de départ (profil CPU `phase=rush`, `perf/profiles/00_cpu_rush.pprof`)
 
 | Zone du Hot Path | Part CPU | Cause physique |
 | :--- | ---: | :--- |
@@ -46,7 +46,7 @@ Les leviers du TP de référence ne sont **pas** repris tels quels ; chaque prob
 | O6 | Frame réseau : encodeur JSON append-only, buffer réutilisé, `runtime/metrics` au lieu de `ReadMemStats` | Fin des 586 Ko/frame de déchets et de la pause STW par tick | `BenchmarkBuildFrame` + test d'égalité octet à octet |
 | O7 | Expérimentation : table de Voronoï précalculée pour le bar le plus proche (compromis espace-temps) | À confirmer : la recherche du bar pèse peu dans le profil, le gain attendu est borné par Amdahl | `benchstat` : retenu ou rejeté selon la p-value |
 
-Chaque étape fait l'objet d'un commit séparé avec `bench/<étape>.txt`, comparé par `benchstat` à l'étape précédente. Une optimisation qui casse `TestGoldenChecksum` ou n'apporte pas de gain significatif est documentée comme échec puis annulée.
+Chaque étape fait l'objet d'un commit séparé avec `perf/bench/<étape>.txt`, comparé par `benchstat` à l'étape précédente. Une optimisation qui casse `TestGoldenChecksum` ou n'apporte pas de gain significatif est documentée comme échec puis annulée.
 
 ---
 
@@ -59,7 +59,7 @@ Toutes les étapes conservent le checksum de référence `0xaa36b4f0b73c614c` (�
 | Baseline | `343a4ee` | 1,461 ms | 5,538 ms | 1,090 ms | 434 Ko et 3 400 allocs/tick |
 | O1 Flaques par valeur + FIFO | `b3feb19` | +1,4 % | +0,6 % | ~ | **Échec** : hypothèse invalidée |
 | O2 Index CSR des flaques | `aa4442e` | ~ | **−66,1 %** | ~ | ×2,95 en croisière |
-| O3a AABB `\|\|` (variante) | `bench/03a_*` | **+52 %** | **+44 %** | ~ | **Échec** : rejetée |
+| O3a AABB `\|\|` (variante) | `perf/bench/03a_*` | **+52 %** | **+44 %** | ~ | **Échec** : rejetée |
 | O3 Chaud/froid + AABB `math.Abs` | `ee75cd5` | −21,0 % | −15,5 % | ~ | Retenue |
 | O4 Zéro allocation | `ed9efdf` | −9,9 % | −6,1 % | ~ | **0 B/op, 0 allocs/op** |
 | O5 `math.Sincos` | `c3bbced` | −8,2 % | −4,6 % | ~ | Bit-exact |
@@ -68,7 +68,7 @@ Toutes les étapes conservent le checksum de référence `0xaa36b4f0b73c614c` (�
 | O7 Table de Voronoï certifiée | `f54df13` | −8,9 % | −6,2 % | ~² | Plafond d'Amdahl : 11,5 % |
 | **Total** | | **0,921 ms (−37 %)** | **1,358 ms (−75 %, ×4,1)** | **0,130 ms (−88 %, ×8,4)** | **0 alloc** |
 
-¹ `updateSimulation` est inchangé. Un A/B entrelacé (`bench/ab_*_interleaved.txt`, +2,8 %, p=0,000) et la comparaison du code machine montrent que seuls le pas des flaques (48 → 40 o) et le padding `NOP` diffèrent : c'est un **biais d'alignement du code**, pas un effet algorithmique.
+¹ `updateSimulation` est inchangé. Un A/B entrelacé (`perf/bench/ab_*_interleaved.txt`, +2,8 %, p=0,000) et la comparaison du code machine montrent que seuls le pas des flaques (48 → 40 o) et le padding `NOP` diffèrent : c'est un **biais d'alignement du code**, pas un effet algorithmique.
 ² −18,7 % mesuré sur un code non modifié : variance inter-séries de `BuildFrame` (±4 à 12 %).
 
 ### Validation sous charge réelle (serveur + client WebSocket, 25 s, 750 ticks)

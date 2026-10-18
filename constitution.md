@@ -26,4 +26,4 @@ Un gain non significatif dans `benchstat` (p ≥ 0.05) ou une régression du che
 
 ## 4. Format
 
-Réponses denses et vérifiables. Code complet, typé, `gofmt`-é, vérifié avec `go vet` et `-gcflags="-m"` (aucune évasion sur le tas dans le Hot Path). Un commit par optimisation, accompagné de `bench/<étape>.txt`.
+Réponses denses et vérifiables. Code complet, typé, `gofmt`-é, vérifié avec `go vet` et `-gcflags="-m"` (aucune évasion sur le tas dans le Hot Path). Un commit par optimisation, accompagné de `perf/bench/<étape>.txt`.
