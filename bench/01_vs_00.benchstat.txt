@@ -1,0 +1,43 @@
+goos: windows
+goarch: amd64
+pkg: barmash
+cpu: AMD Ryzen 7 9700X 8-Core Processor             
+                                │ bench/00_baseline.txt │     bench/01_puddles_values.txt      │
+                                │        sec/op         │   sec/op     vs base                 │
+1_ContiguousSlice-16                        6.409µ ± 0%
+2_PointersSequential-16                     7.770µ ± 1%
+3_PointersScattered-16                      12.54µ ± 2%
+UpdateSimulation/phase=early-16             1.461m ± 1%   1.481m ± 3%  +1.38% (p=0.002 n=10)
+UpdateSimulation/phase=rush-16              5.538m ± 0%   5.573m ± 0%  +0.63% (p=0.000 n=10)
+BuildFrame-16                               1.090m ± 2%   1.067m ± 1%  -2.04% (p=0.007 n=10)
+geomean                                     132.9µ        2.065m       -0.02%                ¹
+¹ benchmark set differs from baseline; geomeans may not be comparable
+
+                                │ bench/00_baseline.txt │      bench/01_puddles_values.txt      │
+                                │         B/op          │     B/op      vs base                 │
+1_ContiguousSlice-16                       0.000 ± 0%
+2_PointersSequential-16                    0.000 ± 0%
+3_PointersScattered-16                     0.000 ± 0%
+UpdateSimulation/phase=early-16          423.5Ki ± 2%     426.5Ki ± 1%       ~ (p=0.137 n=10)
+UpdateSimulation/phase=rush-16           418.6Ki ± 0%     412.6Ki ± 0%  -1.44% (p=0.000 n=10)
+BuildFrame-16                            571.8Ki ± 3%     566.0Ki ± 2%       ~ (p=0.481 n=10)
+geomean                                               ¹   463.5Ki       -0.59%                ²
+¹ summaries must be >0 to compute geomean
+² benchmark set differs from baseline; geomeans may not be comparable
+
+                                │ bench/00_baseline.txt │     bench/01_puddles_values.txt      │
+                                │       allocs/op       │  allocs/op   vs base                 │
+1_ContiguousSlice-16                       0.000 ± 0%
+2_PointersSequential-16                    0.000 ± 0%
+3_PointersScattered-16                     0.000 ± 0%
+UpdateSimulation/phase=early-16           3.388k ± 2%     3.412k ± 1%       ~ (p=0.137 n=10)
+UpdateSimulation/phase=rush-16            3.305k ± 0%     3.300k ± 0%  -0.15% (p=0.000 n=10)
+BuildFrame-16                              6.000 ± 0%      6.000 ± 0%       ~ (p=1.000 n=10) ¹
+geomean                                               ²    407.3       +0.18%                ³
+¹ all samples are equal
+² summaries must be >0 to compute geomean
+³ benchmark set differs from baseline; geomeans may not be comparable
+
+              │ bench/00_baseline.txt │     bench/01_puddles_values.txt     │
+              │      bytes/frame      │ bytes/frame   vs base               │
+BuildFrame-16            360.0Ki ± 0%   360.0Ki ± 0%  -0.00% (p=0.013 n=10)

@@ -97,14 +97,22 @@ type BarCounter struct {
 	BeersServed int     `json:"beers_served"`
 }
 
-// VomitPuddle représente une flaque de vomi au sol bloquant la case
+// VomitPuddle représente une flaque de vomi au sol bloquant la case.
+// Stockée par valeur (aucun pointeur) : le tableau des flaques est marqué noscan par le runtime.
 type VomitPuddle struct {
 	ID             int64   `json:"id"`
 	X              float64 `json:"x"`
 	Y              float64 `json:"y"`
 	Radius         float64 `json:"radius"`
-	RemainingTicks int     `json:"remaining_ticks"`
+	RemainingTicks int     `json:"remaining_ticks"` // Calculé à l'encodage : ExpireTick - currentTick
+	ExpireTick     int64   `json:"-"`               // Tick de disparition (horodatage absolu)
 }
+
+// PuddleLifetimeTicks est identique pour toutes les flaques : elles expirent dans leur ordre de création (FIFO).
+const PuddleLifetimeTicks = VomitDurationTicks * 2
+
+// MaxPuddlesCapacity dimensionne la tranche des flaques une fois pour toutes (~460 flaques en croisière).
+const MaxPuddlesCapacity = 2048
 
 // BarDistance structure temporaire allouée dynamiquement pour chaque calcul de distance
 type BarDistance struct {
@@ -144,11 +152,11 @@ type SimStats struct {
 
 // FramePayload envoyé à l'interface Web Canvas à chaque tick
 type FramePayload struct {
-	Stats        SimStats       `json:"stats"`
-	WorldSize    float64        `json:"world_size"`
-	Bars         []BarCounter   `json:"bars"`
-	VomitPuddles []*VomitPuddle `json:"puddles"`
-	Clients      []ClientPoint  `json:"clients"`
+	Stats        SimStats      `json:"stats"`
+	WorldSize    float64       `json:"world_size"`
+	Bars         []BarCounter  `json:"bars"`
+	VomitPuddles []VomitPuddle `json:"puddles"`
+	Clients      []ClientPoint `json:"clients"`
 }
 
 // -----------------------------------------------------------------------------
@@ -159,7 +167,7 @@ var (
 	simRng          *rand.Rand
 	clients         []*Client // Tranche de pointeurs dispersés (Heap Churn)
 	bars            []BarCounter
-	vomitPuddles    []*VomitPuddle // Flaques actives en mémoire
+	vomitPuddles    []VomitPuddle // Flaques actives, contiguës et triées par ExpireTick croissant
 	puddleIdSeq     int64
 	totalBeersCount int
 	currentTick     int64
@@ -173,7 +181,7 @@ func initSimulation(seed int64) {
 	puddleIdSeq = 0
 	totalBeersCount = 0
 	currentTick = 0
-	vomitPuddles = make([]*VomitPuddle, 0)
+	vomitPuddles = make([]VomitPuddle, 0, MaxPuddlesCapacity)
 
 	// Création des 8 comptoirs de bar répartis dans la salle
 	bars = []BarCounter{
@@ -223,16 +231,15 @@ func updateSimulation() {
 	start := time.Now()
 	currentTick++
 
-	// ANTI-PATTERN 1 : Allocation d'une nouvelle tranche pour filtrer les flaques actives
-	// Au lieu de réutiliser un buffer statique, on alloue une nouvelle tranche à chaque tick.
-	activePuddles := make([]*VomitPuddle, 0, len(vomitPuddles))
-	for _, p := range vomitPuddles {
-		p.RemainingTicks--
-		if p.RemainingTicks > 0 {
-			activePuddles = append(activePuddles, p)
-		}
+	// O1 : Expiration FIFO. Les flaques ont toutes la même durée de vie, donc les flaques
+	// expirées forment toujours un préfixe : aucune décrémentation ni nouvelle tranche par tick.
+	expired := 0
+	for expired < len(vomitPuddles) && vomitPuddles[expired].ExpireTick <= currentTick {
+		expired++
 	}
-	vomitPuddles = activePuddles
+	if expired > 0 {
+		vomitPuddles = vomitPuddles[:copy(vomitPuddles, vomitPuddles[expired:])]
+	}
 
 	// ANTI-PATTERN 2 : Parcours de 10 000 pointeurs dispersés []*Client
 	// Le processeur ne peut pas anticiper les adresses des structures Client (Prefetcher inefficace).
@@ -250,7 +257,8 @@ func updateSimulation() {
 		isTrappedInVomit := false
 		isSmellingVomit := false
 
-		for _, vp := range vomitPuddles {
+		for pIdx := range vomitPuddles {
+			vp := &vomitPuddles[pIdx]
 			// Calcul brut de distance Euclidienne avec math.Sqrt
 			dx := c.X - vp.X
 			dy := c.Y - vp.Y
@@ -363,16 +371,15 @@ func updateSimulation() {
 					c.StateTimer = VomitDurationTicks
 					c.Stamina = 0.0
 
-					// Création d'une nouvelle mare de vomi allouée sur le Tas
+					// Création d'une nouvelle mare de vomi, ajoutée par valeur dans la tranche préallouée
 					puddleIdSeq++
-					newPuddle := &VomitPuddle{
-						ID:             puddleIdSeq,
-						X:              c.X,
-						Y:              c.Y,
-						Radius:         VomitRadius,
-						RemainingTicks: VomitDurationTicks * 2, // Reste au sol après le vomi
-					}
-					vomitPuddles = append(vomitPuddles, newPuddle)
+					vomitPuddles = append(vomitPuddles, VomitPuddle{
+						ID:         puddleIdSeq,
+						X:          c.X,
+						Y:          c.Y,
+						Radius:     VomitRadius,
+						ExpireTick: currentTick + int64(PuddleLifetimeTicks), // Reste au sol après le vomi
+					})
 					continue
 				}
 			}
@@ -537,6 +544,10 @@ func buildFrame(liveTPS int) ([]byte, error) {
 			State:   int8(c.State),
 			Alcohol: scaledAlc,
 		}
+	}
+
+	for i := range vomitPuddles {
+		vomitPuddles[i].RemainingTicks = int(vomitPuddles[i].ExpireTick - currentTick)
 	}
 
 	payload := FramePayload{

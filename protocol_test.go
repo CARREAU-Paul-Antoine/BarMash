@@ -60,7 +60,7 @@ func stateChecksum() uint64 {
 		putF(p.X)
 		putF(p.Y)
 		putF(p.Radius)
-		put(uint64(p.RemainingTicks))
+		put(uint64(p.ExpireTick - currentTick)) // Équivalent observable de l'ancien RemainingTicks
 	}
 	for _, b := range bars {
 		put(uint64(b.BeersServed))
@@ -102,16 +102,13 @@ func takeSnapshot() *simSnapshot {
 	s := &simSnapshot{
 		tick:        currentTick,
 		clients:     make([]Client, len(clients)),
-		puddles:     make([]VomitPuddle, len(vomitPuddles)),
+		puddles:     append([]VomitPuddle(nil), vomitPuddles...),
 		bars:        append([]BarCounter(nil), bars...),
 		puddleIdSeq: puddleIdSeq,
 		beers:       totalBeersCount,
 	}
 	for i, c := range clients {
 		s.clients[i] = *c
-	}
-	for i, p := range vomitPuddles {
-		s.puddles[i] = *p
 	}
 	return s
 }
@@ -121,11 +118,7 @@ func (s *simSnapshot) restore() {
 	for i := range s.clients {
 		*clients[i] = s.clients[i]
 	}
-	vomitPuddles = vomitPuddles[:0]
-	for i := range s.puddles {
-		p := s.puddles[i]
-		vomitPuddles = append(vomitPuddles, &p)
-	}
+	vomitPuddles = append(vomitPuddles[:0], s.puddles...)
 	copy(bars, s.bars)
 	currentTick = s.tick
 	puddleIdSeq = s.puddleIdSeq

@@ -1,0 +1,36 @@
+goos: windows
+goarch: amd64
+pkg: barmash
+cpu: AMD Ryzen 7 9700X 8-Core Processor             
+BenchmarkUpdateSimulation/phase=early-16         	     820	   1471253 ns/op	  433974 B/op	    3390 allocs/op
+BenchmarkUpdateSimulation/phase=early-16         	     808	   1519970 ns/op	  438214 B/op	    3423 allocs/op
+BenchmarkUpdateSimulation/phase=early-16         	     786	   1495807 ns/op	  437246 B/op	    3415 allocs/op
+BenchmarkUpdateSimulation/phase=early-16         	     811	   1524610 ns/op	  436975 B/op	    3413 allocs/op
+BenchmarkUpdateSimulation/phase=early-16         	     806	   1493798 ns/op	  439108 B/op	    3430 allocs/op
+BenchmarkUpdateSimulation/phase=early-16         	     820	   1474437 ns/op	  433974 B/op	    3390 allocs/op
+BenchmarkUpdateSimulation/phase=early-16         	     817	   1473916 ns/op	  434856 B/op	    3397 allocs/op
+BenchmarkUpdateSimulation/phase=early-16         	     792	   1485999 ns/op	  439273 B/op	    3431 allocs/op
+BenchmarkUpdateSimulation/phase=early-16         	     812	   1475505 ns/op	  436589 B/op	    3410 allocs/op
+BenchmarkUpdateSimulation/phase=early-16         	     814	   1475887 ns/op	  435856 B/op	    3405 allocs/op
+BenchmarkUpdateSimulation/phase=rush-16          	     214	   5573125 ns/op	  422495 B/op	    3300 allocs/op
+BenchmarkUpdateSimulation/phase=rush-16          	     216	   5639354 ns/op	  422462 B/op	    3300 allocs/op
+BenchmarkUpdateSimulation/phase=rush-16          	     213	   5574569 ns/op	  422513 B/op	    3300 allocs/op
+BenchmarkUpdateSimulation/phase=rush-16          	     214	   5567273 ns/op	  422494 B/op	    3300 allocs/op
+BenchmarkUpdateSimulation/phase=rush-16          	     208	   5590529 ns/op	  422612 B/op	    3301 allocs/op
+BenchmarkUpdateSimulation/phase=rush-16          	     213	   5568974 ns/op	  422512 B/op	    3300 allocs/op
+BenchmarkUpdateSimulation/phase=rush-16          	     214	   5576344 ns/op	  422496 B/op	    3300 allocs/op
+BenchmarkUpdateSimulation/phase=rush-16          	     214	   5570807 ns/op	  422496 B/op	    3300 allocs/op
+BenchmarkUpdateSimulation/phase=rush-16          	     214	   5573126 ns/op	  422494 B/op	    3300 allocs/op
+BenchmarkUpdateSimulation/phase=rush-16          	     214	   5568679 ns/op	  422495 B/op	    3300 allocs/op
+BenchmarkBuildFrame-16                           	    1143	   1047705 ns/op	    368673 bytes/frame	  571317 B/op	       6 allocs/op
+BenchmarkBuildFrame-16                           	    1142	   1072354 ns/op	    368674 bytes/frame	  566227 B/op	       6 allocs/op
+BenchmarkBuildFrame-16                           	    1128	   1057837 ns/op	    368674 bytes/frame	  588850 B/op	       6 allocs/op
+BenchmarkBuildFrame-16                           	    1128	   1067316 ns/op	    368673 bytes/frame	  585338 B/op	       6 allocs/op
+BenchmarkBuildFrame-16                           	    1131	   1070503 ns/op	    368675 bytes/frame	  567425 B/op	       6 allocs/op
+BenchmarkBuildFrame-16                           	    1137	   1058246 ns/op	    368674 bytes/frame	  578971 B/op	       6 allocs/op
+BenchmarkBuildFrame-16                           	    1140	   1067638 ns/op	    368672 bytes/frame	  597740 B/op	       6 allocs/op
+BenchmarkBuildFrame-16                           	    1155	   1091245 ns/op	    368675 bytes/frame	  590580 B/op	       6 allocs/op
+BenchmarkBuildFrame-16                           	    1114	   1057220 ns/op	    368675 bytes/frame	  563989 B/op	       6 allocs/op
+BenchmarkBuildFrame-16                           	    1113	   1072225 ns/op	    368675 bytes/frame	  580125 B/op	       6 allocs/op
+PASS
+ok  	barmash	58.496s
