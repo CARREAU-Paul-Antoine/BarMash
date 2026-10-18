@@ -1,0 +1,32 @@
+goos: windows
+goarch: amd64
+pkg: barmash
+cpu: AMD Ryzen 7 9700X 8-Core Processor             
+                                │ bench/06b_digit_lut.txt │    bench/07_bar_voronoi_lut.txt     │
+                                │         sec/op          │   sec/op     vs base                │
+UpdateSimulation/phase=early-16             1010.8µ ±  2%   920.8µ ± 3%   -8.90% (p=0.000 n=10)
+UpdateSimulation/phase=rush-16               1.448m ± 16%   1.358m ± 1%   -6.21% (p=0.000 n=10)
+BuildFrame-16                                160.2µ ±  7%   130.3µ ± 4%  -18.66% (p=0.000 n=10)
+geomean                                      616.6µ         546.2µ       -11.42%
+
+                                │ bench/06b_digit_lut.txt │    bench/07_bar_voronoi_lut.txt     │
+                                │          B/op           │    B/op     vs base                 │
+UpdateSimulation/phase=early-16              0.000 ± 0%     0.000 ± 0%       ~ (p=1.000 n=10) ¹
+UpdateSimulation/phase=rush-16               0.000 ± 0%     0.000 ± 0%       ~ (p=1.000 n=10) ¹
+BuildFrame-16                                0.000 ± 0%     0.000 ± 0%       ~ (p=1.000 n=10) ¹
+geomean                                                 ²               +0.00%                ²
+¹ all samples are equal
+² summaries must be >0 to compute geomean
+
+                                │ bench/06b_digit_lut.txt │    bench/07_bar_voronoi_lut.txt     │
+                                │        allocs/op        │ allocs/op   vs base                 │
+UpdateSimulation/phase=early-16              0.000 ± 0%     0.000 ± 0%       ~ (p=1.000 n=10) ¹
+UpdateSimulation/phase=rush-16               0.000 ± 0%     0.000 ± 0%       ~ (p=1.000 n=10) ¹
+BuildFrame-16                                0.000 ± 0%     0.000 ± 0%       ~ (p=1.000 n=10) ¹
+geomean                                                 ²               +0.00%                ²
+¹ all samples are equal
+² summaries must be >0 to compute geomean
+
+              │ bench/06b_digit_lut.txt │  bench/07_bar_voronoi_lut.txt  │
+              │       bytes/frame       │ bytes/frame   vs base          │
+BuildFrame-16              360.0Ki ± 0%   360.0Ki ± 0%  ~ (p=0.777 n=10)

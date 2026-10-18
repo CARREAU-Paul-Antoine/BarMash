@@ -183,6 +183,7 @@ func initSimulation(seed int64) {
 		barCenters[b] = Vec2{X: bars[b].X + bars[b].W*0.5, Y: bars[b].Y + bars[b].H*0.5}
 	}
 	buildBarJSONPrefixes()
+	buildBarLUT()
 
 	// Deux tranches contiguës allouées une seule fois (ordre des tirages RNG inchangé)
 	clients = make([]Client, TotalClients)
@@ -401,21 +402,8 @@ func updateSimulation() {
 				// précalculés (tableau de 128 o, 2 lignes de cache). La distance et le
 				// vecteur du gagnant sont réutilisés : même expression flottante, une
 				// racine carrée en moins.
-				nearestBarIdx := 0
-				distToBar := math.MaxFloat64
-				dirX, dirY := 0.0, 0.0
-
-				for bIdx := range barCenters {
-					dx := barCenters[bIdx].X - pos.X
-					dy := barCenters[bIdx].Y - pos.Y
-					d := math.Sqrt(dx*dx + dy*dy)
-
-					if d < distToBar {
-						distToBar = d
-						nearestBarIdx = bIdx
-						dirX, dirY = dx, dy
-					}
-				}
+				// O7 : table de Voronoï certifiée (bar_lut.go), repli sur le scan aux frontières.
+				nearestBarIdx, distToBar, dirX, dirY := nearestBar(pos.X, pos.Y)
 
 				targetBar := &bars[nearestBarIdx]
 				targetCenterX := barCenters[nearestBarIdx].X
