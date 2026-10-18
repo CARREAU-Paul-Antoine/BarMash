@@ -240,6 +240,7 @@ func updateSimulation() {
 	if expired > 0 {
 		vomitPuddles = vomitPuddles[:copy(vomitPuddles, vomitPuddles[expired:])]
 	}
+	buildPuddleIndex()
 
 	// ANTI-PATTERN 2 : Parcours de 10 000 pointeurs dispersés []*Client
 	// Le processeur ne peut pas anticiper les adresses des structures Client (Prefetcher inefficace).
@@ -252,24 +253,11 @@ func updateSimulation() {
 		}
 
 		// ---------------------------------------------------------------------
-		// ÉTAPE A : Évaluation des Flaques de Vomi (Scan Linéaire O(N_puddles))
+		// ÉTAPE A : Évaluation des Flaques de Vomi (O2 : index CSR, voisinage 3 x 3)
 		// ---------------------------------------------------------------------
-		isTrappedInVomit := false
-		isSmellingVomit := false
-
-		for pIdx := range vomitPuddles {
-			vp := &vomitPuddles[pIdx]
-			// Calcul brut de distance Euclidienne avec math.Sqrt
-			dx := c.X - vp.X
-			dy := c.Y - vp.Y
-			dist := math.Sqrt(dx*dx + dy*dy)
-
-			if dist <= vp.Radius {
-				isTrappedInVomit = true
-				break
-			} else if dist <= VomitPerturbRadius {
-				isSmellingVomit = true
-			}
+		isTrappedInVomit, isSmellingVomit := false, false
+		if len(vomitPuddles) > 0 { // Fast-path : aucun appel en début de soirée
+			isTrappedInVomit, isSmellingVomit = probePuddles(c.X, c.Y)
 		}
 
 		// Effet du vomi sur le client
