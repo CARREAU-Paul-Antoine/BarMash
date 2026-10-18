@@ -1,0 +1,54 @@
+goos: windows
+goarch: amd64
+pkg: barmash
+cpu: AMD Ryzen 7 9700X 8-Core Processor             
+BenchmarkBuildFrameBinary-16    	   43922	     28776 ns/op	     62668 bytes/frame	       0 B/op	       0 allocs/op
+BenchmarkBuildFrameBinary-16    	   40515	     28819 ns/op	     62668 bytes/frame	       0 B/op	       0 allocs/op
+BenchmarkBuildFrameBinary-16    	   40753	     29063 ns/op	     62668 bytes/frame	       0 B/op	       0 allocs/op
+BenchmarkBuildFrameBinary-16    	   41660	     28925 ns/op	     62668 bytes/frame	       0 B/op	       0 allocs/op
+BenchmarkBuildFrameBinary-16    	   41379	     28826 ns/op	     62668 bytes/frame	       0 B/op	       0 allocs/op
+BenchmarkBuildFrameBinary-16    	   41475	     29546 ns/op	     62668 bytes/frame	       0 B/op	       0 allocs/op
+BenchmarkTelemetryInsert/mode=autocommit-16         	     325	   3589133 ns/op	     35891 ns/row	  108582 B/op	    2327 allocs/op
+BenchmarkTelemetryInsert/mode=autocommit-16         	     339	   3602276 ns/op	     36023 ns/row	  108574 B/op	    2327 allocs/op
+BenchmarkTelemetryInsert/mode=autocommit-16         	     343	   3663317 ns/op	     36633 ns/row	  108573 B/op	    2327 allocs/op
+BenchmarkTelemetryInsert/mode=autocommit-16         	     328	   3623041 ns/op	     36230 ns/row	  108567 B/op	    2327 allocs/op
+BenchmarkTelemetryInsert/mode=autocommit-16         	     328	   3570994 ns/op	     35710 ns/row	  108568 B/op	    2327 allocs/op
+BenchmarkTelemetryInsert/mode=autocommit-16         	     342	   3730560 ns/op	     37306 ns/row	  108571 B/op	    2327 allocs/op
+BenchmarkTelemetryInsert/mode=batch-16              	    4386	    361007 ns/op	      3610 ns/row	   60355 B/op	    1337 allocs/op
+BenchmarkTelemetryInsert/mode=batch-16              	    4058	    342175 ns/op	      3422 ns/row	   60312 B/op	    1337 allocs/op
+BenchmarkTelemetryInsert/mode=batch-16              	    4257	    363135 ns/op	      3631 ns/row	   60315 B/op	    1337 allocs/op
+BenchmarkTelemetryInsert/mode=batch-16              	    4620	    367340 ns/op	      3673 ns/row	   60316 B/op	    1337 allocs/op
+BenchmarkTelemetryInsert/mode=batch-16              	    4189	    352792 ns/op	      3528 ns/row	   60311 B/op	    1337 allocs/op
+BenchmarkTelemetryInsert/mode=batch-16              	    4179	    357944 ns/op	      3579 ns/row	   60306 B/op	    1337 allocs/op
+BenchmarkHistoryQuery/index=false-16                	      94	  11240495 ns/op	  145264 B/op	    4776 allocs/op
+BenchmarkHistoryQuery/index=false-16                	     100	  11284693 ns/op	  145234 B/op	    4776 allocs/op
+BenchmarkHistoryQuery/index=false-16                	      98	  11782026 ns/op	  145244 B/op	    4776 allocs/op
+BenchmarkHistoryQuery/index=false-16                	     100	  11495879 ns/op	  145234 B/op	    4776 allocs/op
+BenchmarkHistoryQuery/index=false-16                	     100	  11442899 ns/op	  145234 B/op	    4776 allocs/op
+BenchmarkHistoryQuery/index=false-16                	     100	  11731817 ns/op	  145234 B/op	    4776 allocs/op
+BenchmarkHistoryQuery/index=true-16                 	    4226	    282911 ns/op	   18161 B/op	    2137 allocs/op
+BenchmarkHistoryQuery/index=true-16                 	    4306	    283390 ns/op	   18161 B/op	    2137 allocs/op
+BenchmarkHistoryQuery/index=true-16                 	    4153	    286320 ns/op	   18162 B/op	    2137 allocs/op
+BenchmarkHistoryQuery/index=true-16                 	    4220	    282498 ns/op	   18161 B/op	    2137 allocs/op
+BenchmarkHistoryQuery/index=true-16                 	    4231	    287431 ns/op	   18161 B/op	    2137 allocs/op
+BenchmarkHistoryQuery/index=true-16                 	    4227	    281618 ns/op	   18161 B/op	    2137 allocs/op
+BenchmarkHistoryHandler/pool=false-16               	    1011	   1179827 ns/op	  572114 B/op	    7058 allocs/op
+BenchmarkHistoryHandler/pool=false-16               	     985	   1120893 ns/op	  572114 B/op	    7058 allocs/op
+BenchmarkHistoryHandler/pool=false-16               	    1050	   1142773 ns/op	  572114 B/op	    7058 allocs/op
+BenchmarkHistoryHandler/pool=false-16               	    1131	   1169684 ns/op	  572114 B/op	    7058 allocs/op
+BenchmarkHistoryHandler/pool=false-16               	     973	   1129015 ns/op	  572114 B/op	    7058 allocs/op
+BenchmarkHistoryHandler/pool=false-16               	     972	   1160393 ns/op	  572114 B/op	    7058 allocs/op
+BenchmarkHistoryHandler/pool=true-16                	    1330	    919972 ns/op	   58148 B/op	    7039 allocs/op
+BenchmarkHistoryHandler/pool=true-16                	    1328	    914458 ns/op	   58149 B/op	    7039 allocs/op
+BenchmarkHistoryHandler/pool=true-16                	    1333	    912612 ns/op	   58461 B/op	    7039 allocs/op
+BenchmarkHistoryHandler/pool=true-16                	    1284	    919343 ns/op	   58160 B/op	    7039 allocs/op
+BenchmarkHistoryHandler/pool=true-16                	    1348	    901013 ns/op	   58454 B/op	    7039 allocs/op
+BenchmarkHistoryHandler/pool=true-16                	    1308	    903049 ns/op	   58155 B/op	    7039 allocs/op
+BenchmarkBuildFrame-16                              	    9180	    131665 ns/op	    368221 bytes/frame	       0 B/op	       0 allocs/op
+BenchmarkBuildFrame-16                              	    9424	    128457 ns/op	    368221 bytes/frame	       0 B/op	       0 allocs/op
+BenchmarkBuildFrame-16                              	    9550	    128998 ns/op	    368220 bytes/frame	       0 B/op	       0 allocs/op
+BenchmarkBuildFrame-16                              	    9552	    128945 ns/op	    368221 bytes/frame	       0 B/op	       0 allocs/op
+BenchmarkBuildFrame-16                              	    9442	    130019 ns/op	    368221 bytes/frame	       0 B/op	       0 allocs/op
+BenchmarkBuildFrame-16                              	    9568	    128600 ns/op	    368221 bytes/frame	       0 B/op	       0 allocs/op
+PASS
+ok  	barmash	82.822s

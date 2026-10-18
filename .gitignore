@@ -16,3 +16,6 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Base SQLite locale (historique de télémétrie)
+data/

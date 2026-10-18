@@ -634,13 +634,67 @@
         ctx.restore();
       }
 
+      // ---------------- Décodage de la frame binaire (format BMF v1, cf. binary_frame.go) ----------------
+      // Les objets clients et flaques sont réutilisés d'une frame à l'autre : aucune création
+      // de 10 000 objets par frame, contrairement à JSON.parse.
+      const decoded = { stats: {}, world_size: 0, bars: [], puddles: [], clients: [] };
+
+      function decodeBinaryFrame(buffer, init) {
+        const v = new DataView(buffer);
+        if (v.getUint8(0) !== 1) throw new Error('Version de frame inconnue : ' + v.getUint8(0));
+        const nBars = v.getUint16(2, true);
+        const nPuddles = v.getUint16(18, true);
+        const nClients = v.getUint16(40, true);
+        const s = decoded.stats;
+        s.tps = v.getUint8(1);
+        s.tick = v.getUint32(4, true);
+        s.tick_duration_ms = v.getFloat32(8, true);
+        s.sober_count = v.getUint16(12, true);
+        s.drinking_count = v.getUint16(14, true);
+        s.vomiting_count = v.getUint16(16, true);
+        s.active_puddles = nPuddles;
+        s.beers_served = v.getUint32(20, true);
+        s.avg_alcohol = v.getFloat32(24, true);
+        s.heap_alloc_mb = v.getFloat32(28, true);
+        s.total_alloc_mb = v.getFloat32(32, true);
+        s.num_gc = v.getUint32(36, true);
+        s.total_clients = nClients;
+        decoded.world_size = init.world_size;
+
+        let off = 44;
+        decoded.bars.length = nBars;
+        for (let i = 0; i < nBars; i++, off += 4) {
+          const b = decoded.bars[i] || (decoded.bars[i] = Object.assign({}, init.bars[i]));
+          b.beers_served = v.getUint32(off, true);
+        }
+        decoded.puddles.length = nPuddles;
+        for (let i = 0; i < nPuddles; i++, off += 6) {
+          const p = decoded.puddles[i] || (decoded.puddles[i] = {});
+          p.x = v.getUint16(off, true);
+          p.y = v.getUint16(off + 2, true);
+          p.radius = v.getUint8(off + 4);
+          p.remaining_ticks = v.getUint8(off + 5);
+        }
+        decoded.clients.length = nClients;
+        for (let i = 0; i < nClients; i++, off += 6) {
+          const c = decoded.clients[i] || (decoded.clients[i] = {});
+          c.x = v.getInt16(off, true);
+          c.y = v.getInt16(off + 2, true);
+          c.s = v.getUint8(off + 4);
+          c.a = v.getUint8(off + 5);
+        }
+        return decoded;
+      }
+
       // ---------------- Connexion WebSocket ----------------
       function connectWebSocket() {
         const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${protocol}//${location.host}/ws`;
         const socket = new WebSocket(wsUrl);
+        socket.binaryType = 'arraybuffer';
 
         let initialCentered = false;
+        let initInfo = null;
 
         socket.onopen = () => {
           wsDot.classList.add('live');
@@ -649,8 +703,19 @@
 
         socket.onmessage = (event) => {
           try {
-            const payload = JSON.parse(event.data);
-            latestPayload = payload;
+            // Message texte : « init » (comptoirs, taille du monde) en binaire, frame complète en JSON (?format=json)
+            if (typeof event.data === 'string') {
+              const msg = JSON.parse(event.data);
+              if (msg.type === 'init') {
+                initInfo = msg;
+                return;
+              }
+              latestPayload = msg;
+            } else {
+              if (!initInfo) return;
+              latestPayload = decodeBinaryFrame(event.data, initInfo);
+            }
+            const payload = latestPayload;
 
             if (!initialCentered && payload.world_size) {
               autoCenterCamera(payload.world_size);
